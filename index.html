@@ -1825,98 +1825,83 @@
             };
         }
         
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent scrolling when touching the canvas
-            const pos = getTouchPos(e);
-            
-            // Dismiss tutorial on any touch
-            dismissTutorial();
-            
-            if (isSpongeClicked(pos.x, pos.y)) {
-                sponge.isDragging = true;
-                sponge.offsetX = pos.x - sponge.x;
-                sponge.offsetY = pos.y - sponge.y;
-                
-                // Reset scrubbing tracking
-                lastSpongeX = sponge.x;
-                lastSpongeY = sponge.y;
-                
-                // Cancel tutorial timer when user starts interacting
-                if (tutorialTimeout) clearTimeout(tutorialTimeout);
+canvas.addEventListener('touchstart', (e) => {
+    const pos = getTouchPos(e);
+    dismissTutorial();
+
+    if (isSpongeClicked(pos.x, pos.y)) {
+        e.preventDefault();
+        sponge.isDragging = true;
+        sponge.offsetX = pos.x - sponge.x;
+        sponge.offsetY = pos.y - sponge.y;
+
+        lastSpongeX = sponge.x;
+        lastSpongeY = sponge.y;
+
+        if (tutorialTimeout) clearTimeout(tutorialTimeout);
+    }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!sponge.isDragging) return;
+
+    e.preventDefault(); 
+    const pos = getTouchPos(e);
+
+    const newX = pos.x - sponge.offsetX;
+    const newY = pos.y - sponge.offsetY;
+
+    if (lastSpongeX !== 0 && lastSpongeY !== 0) {
+        const dx = newX - lastSpongeX;
+        const dy = newY - lastSpongeY;
+        const movementDistance = Math.sqrt(dx*dx + dy*dy);
+
+        if (movementDistance >= SCRUBBING_THRESHOLD) {
+            if (checkSpongeCalendarCollision()) {
+                const cal = calendars[currentActiveMonth];
+                cal.scrubbingDistance += movementDistance;
+
+                if (!isCleaningInProgress) isCleaningInProgress = true;
+            } else {
+                if (isCleaningInProgress) isCleaningInProgress = false;
             }
-        });
-        
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // Prevent scrolling when touching the canvas
-            const pos = getTouchPos(e);
-            
-            if (sponge.isDragging) {
-                const newX = pos.x - sponge.offsetX;
-                const newY = pos.y - sponge.offsetY;
-                
-                // Calculate movement distance for scrubbing
-                if (lastSpongeX !== 0 && lastSpongeY !== 0) {
-                    const dx = newX - lastSpongeX;
-                    const dy = newY - lastSpongeY;
-                    const movementDistance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    // Only count significant movements
-                    if (movementDistance >= SCRUBBING_THRESHOLD) {
-                        // Check if over active calendar
-                        if (checkSpongeCalendarCollision()) {
-                            const calendar = calendars[currentActiveMonth];
-                            // Add to calendar's individual scrubbing distance
-                            calendar.scrubbingDistance += movementDistance;
-                            
-                            // Start cleaning if not already started
-                            if (!isCleaningInProgress) {
-                                isCleaningInProgress = true;
-                            }
-                        } else {
-                            // Stop cleaning if moved off calendar, but DON'T reset progress
-                            if (isCleaningInProgress) {
-                                isCleaningInProgress = false;
-                            }
-                        }
-                    }
-                }
-                
-                lastSpongeX = newX;
-                lastSpongeY = newY;
-                sponge.x = newX;
-                sponge.y = newY;
-                
-                draw();
-            }
-        });
-        
-        canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            sponge.isDragging = false;
-            
-            // Reset scrubbing tracking
-            lastSpongeX = 0;
-            lastSpongeY = 0;
-            
-            // Stop cleaning flag but DON'T reset progress
-            if (isCleaningInProgress) {
-                isCleaningInProgress = false;
-            }
-        });
-        
-        canvas.addEventListener('touchcancel', (e) => {
-            e.preventDefault();
+        }
+    }
+
+    lastSpongeX = newX;
+    lastSpongeY = newY;
+    sponge.x = newX;
+    sponge.y = newY;
+
+    draw();
+});
+
+canvas.addEventListener('touchend', () => {
+    if (sponge.isDragging) {
+        sponge.isDragging = false;
+        if (isCleaningInProgress) isCleaningInProgress = false;
+        lastSpongeX = 0;
+        lastSpongeY = 0;
+    }
+});
+
+// New: handle OS/browser interruptions
+canvas.addEventListener('touchcancel', () => {
+    if (sponge.isDragging) {
+        sponge.isDragging = false;
+        if (isCleaningInProgress) isCleaningInProgress = false;
+        lastSpongeX = 0;
+        lastSpongeY = 0;
+    }
+});
+
+        // New: handle OS/browser interruptions
+        canvas.addEventListener('touchcancel', () => {
             if (sponge.isDragging) {
                 sponge.isDragging = false;
-                
-                // Reset scrubbing tracking
+                if (isCleaningInProgress) isCleaningInProgress = false;
                 lastSpongeX = 0;
                 lastSpongeY = 0;
-                
-                // Stop cleaning flag but DON'T reset progress
-                if (isCleaningInProgress) {
-                    isCleaningInProgress = false;
-                }
             }
         });
 
