@@ -1052,12 +1052,8 @@
             
             // Year display (left)
             ctx.fillStyle = '#7CB342';
-            ctx.textAlign = 'left';
-            ctx.fillText('Jahr ' + currentYear, 20, 21);
-            
-            // Money display (right)
-            ctx.textAlign = 'right';
-            ctx.fillText(currentMoney.toLocaleString('de-CH') + '.-', canvas.width - 20, 21);
+            ctx.textAlign = 'center';
+            ctx.fillText('Jahr ' + currentYear, canvas.width / 2, 21);
             
             // Draw calendars between top bar and Erbsen-Bank
             const greenArea = getGreenPeaArea();
@@ -1093,6 +1089,26 @@
             (function drawPeaValueIndicator() {
             const peaX = canvas.width - 90;   // horizontal position
             const peaY = canvas.height - 20;;        // just below Erbsen-Bank
+
+            // Draw real-money counter in Erbsen-Bank (bottom-left)
+            (function drawMoneyCounter() {
+
+                const moneyX = marginCols * GRID_CELL_SIZE;     // left side of the green-pea area
+                const moneyY = canvas.height - 20;              // same vertical position as the pea value text
+
+                // Draw CHF money text like the pea-value text
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+
+                ctx.fillText(
+                    currentMoney.toLocaleString('de-CH') + ".-", 
+                    moneyX, 
+                    moneyY
+                );
+            })();
+
 
             // Draw pea (same as green peas in game)
             ctx.fillStyle = greenPeaColors[0];
