@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erbs-schafts-Spiel TEST</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a; /* Darker grey for contrast */
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            min-height: 100vh;
+            background: #2a2a2a; /* Canvas background color */
+        }
+        canvas {
+            display: block;
+            background: #2a2a2a;
+            width: 100%;
+            max-width: 800px;
+        }
+        #top-bar {
+            display: none;
+        }
+        #controls {
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 5px;
+            z-index: 100;
+            font-size: 12px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        button:hover { background: #45a049; }
+        #scroll-indicator {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #FFD700;
+            padding: 16px 32px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 500;
+            z-index: 100;
+            animation: fadeInBounce 1s ease-out;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        #scroll-indicator.hidden { 
+            display: none;
+        }
+        @keyframes fadeInBounce {
+            0% { 
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(5px);
+            }
+            100% { 
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        #tax-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        #tax-popup.visible {
+            display: block;
+            animation: popupAppear 0.3s ease-out;
+        }
+        @keyframes popupAppear {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        #tax-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 199;
+        }
+        #tax-overlay.visible {
+            display: block;
+        }
+        #tax-popup h2 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 24px;
+        }
+        #tax-popup p {
+            margin: 0 0 20px 0;
+            color: #666;
+            line-height: 1.5;
+        }
+        #tax-popup button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #tax-popup button:hover {
+            background: #45a049;
+        }
+
+        #tax-popup button.no-button {
+            background: #ae0c00;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #tax-popup button.no-button:hover {
+            background: #ae0c00;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="canvas-container"><canvas id="canvas"></canvas></div>
+
+    <div id="top-bar">
+        <div id="year-display">Jahr 1</div>
+        <div id="money-display">0.-</div>
+    </div>
+
+
+    <div id="scroll-indicator" class="hidden">Nach oben scrollen um deinen ganzen Reichtum zu entdecken</div>
+    
+    <div id="tax-overlay"></div>
+    <div id="tax-popup">
+        <h2 id="tax-popup-title">🏛️ Steueramt</h2>
+        <p id="tax-popup-text"></p>
+        <button id="tax-popup-button"></button>
+    </div>
+    
+    <button id="restart-btn" style="display: none; position: fixed; bottom: 20px; left: 20px; z-index: 300; background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Neustart</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const scrollIndicator = document.getElementById('scroll-indicator');
+
+        function resetCanvasToViewport() { 
+            canvas.width = Math.min(800, window.innerWidth); 
+            canvas.height = window.innerHeight; 
+        }
+        resetCanvasToViewport();
+
+        let animationComplete = false;
+        let animationPaused = false;
+        let manualMode = true; // Start in manual mode
+        let greenPeaPlacementIndex = 0; // Track where to place next green peas
+        
+        // Calendar cleaning game state
+        let spongeVisible = true;
+        let sponge = { x: 0, y: 0, isDragging: false, offsetX: 0, offsetY: 0 };
+        let calendars = []; // Will store calendar positions and states
+        let currentActiveMonth = 0; // 0 = January, 1 = February, etc.
+        let cleaningProgress = 0; // 0 to 1
+        let isCleaningInProgress = false;
+        let cleaningStartTime = 0;
+        const CLEANING_DURATION = 1000; // 1 second per month
+        let yearlyPeasEarned = 0; // Track peas earned this year
+        
+        // Scrubbing motion detection
+        let lastSpongeX = 0;
+        let lastSpongeY = 0;
+        let scrubbingDistance = 0;
+        const SCRUBBING_THRESHOLD = 1; // Minimum pixels to move to count as scrubbing
+        const DISTANCE_PER_PROGRESS = 600; // Total distance needed to clean a calendar (increased from 200)
+        
+        // Tutorial state
+        let tutorialShown = false;
+        let showTutorial = false;
+        let tutorialStartTime = performance.now();
+        let tutorialTimeout = null;
+        let tutorialAnimationProgress = 0;
+        const TUTORIAL_DELAY = 50; // 5 seconds
+        let tutorialPhase = 1; // 1 = first tutorial, 2 = second tutorial
+        
+        // Tax popup state
+        let taxPopupStep = 0; // 0 = not shown, 1 = first message, 2 = second message
+        
+        // Heritage event state
+        let heritageEventTriggered = false;
+        let heritageEventProbability = 0; // Increases each month starting from year 2
+        const HERITAGE_BASE_PROBABILITY = 0.05; // 8% per month, ~guaranteed by month 12
+        let postCascadeTaxDelay = 1000; // Delay after cascade completes before showing tax popup (in ms)
+
+        const PEA_SIZE = 12;
+        const PEA_RADIUS = PEA_SIZE / 2;
+        const TOTAL_PEAS = 50000;
+        const SPAWN_RATE = 675;
+        const FALL_SPEED = 67.5;
+
+        const GRID_CELL_SIZE = PEA_SIZE;
+        function calcGridCols() { return Math.max(1, Math.floor(canvas.width / GRID_CELL_SIZE)); }
+        function calcGridRows() { return Math.max(1, Math.floor(canvas.height / GRID_CELL_SIZE)); }
+        let gridCols = calcGridCols();
+        let gridRows = calcGridRows();
+
+        let columnsToSpawn = [];
+        let currentBatchIndex = 0;
+        const occupiedGrid = new Set();
+        const lastSpawnTime = new Map();
+
+        function isScreenFull() {
+            let requiredRows = [-1, -2, -3, -4];
+            for (const r of requiredRows) {
+                for (let col = 0; col < gridCols; col++) {
+                    if (!occupiedGrid.has(getGridKey(col, r))) return false;
+                }
+            }
+            return true;
+        }
+
+        function generateCompleteStack() {
+            console.log("Generating complete stack...");
+
+            // Recompute grid dims
+            gridCols = calcGridCols();
+            gridRows = calcGridRows();
+
+            // Compute total rows needed for TOTAL_PEAS
+            const totalRows = Math.ceil(TOTAL_PEAS / gridCols);
+            const totalHeight = totalRows * GRID_CELL_SIZE;
+
+            // Number of rows to insert ABOVE the current viewport so Part A (visible area) stays in place
+            const extraRowsAbove = Math.max(0, totalRows - gridRows);
+
+            // Snapshot visible region
+            const visibleHeight = window.innerHeight;
+            const visibleWidth = canvas.width;
+            const visibleSnapshot = ctx.getImageData(0, 0, visibleWidth, visibleHeight);
+
+            // Collect peas inside visible region (Part A)
+            const preservedVisible = [];
+            function addPreserved(pea, colorIndex, isGreen) {
+                const oldRow = Math.floor((pea.y + 0.5) / GRID_CELL_SIZE);
+                preservedVisible.push({ x: pea.x, y: pea.y, col: pea.col, oldRow, colorIndex, isGreen });
+            }
+
+            const settledSnapshot = settledPeas.slice();
+            const activeSnapshot = peas.slice();
+
+            for (let i = 0; i < settledSnapshot.length; i++) {
+                const pea = settledSnapshot[i];
+                const peaY = pea.y;
+                if (peaY >= 0 && peaY < visibleHeight) {
+                    const derivedColor = pea.colorIndex !== undefined ? pea.colorIndex : (i % peaColors.length);
+                    addPreserved(pea, derivedColor, pea.isGreen);
+                }
+            }
+            for (let i = 0; i < activeSnapshot.length; i++) {
+                const pea = activeSnapshot[i];
+                const peaY = pea.y;
+                if (peaY >= 0 && peaY < visibleHeight) {
+                    const derivedColor = pea.colorIndex !== undefined ? pea.colorIndex : (i % peaColors.length);
+                    addPreserved(pea, derivedColor, false);
+                }
+            }
+
+
+            // Rebuild world state
+            peas = [];
+            settledPeas = [];
+            occupiedGrid.clear();
+
+            const locked = new Set();
+
+            // Restore preserved Part A peas at shifted rows
+            for (const p of preservedVisible) {
+                const newRow = p.oldRow + extraRowsAbove;
+                const newY = newRow * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+
+                const pea = {
+                    x: p.x,
+                    y: newY,
+                    col: p.col,
+                    row: newRow,
+                    colorIndex: p.colorIndex,
+                    settled: true,
+                    isGreen: p.isGreen || false
+                };
+                settledPeas.push(pea);
+                occupyGrid(p.col, newRow);
+                locked.add(getGridKey(p.col, newRow));
+            }
+
+            // PART B: generate flipped full rows above Part A (golden peas only)
+            // We always fill ALL columns of ALL rows above, so no incomplete rows exist.
+            for (let row = 0; row < extraRowsAbove; row++) {
+                const flippedRow = extraRowsAbove - 1 - row; // flip order
+                for (let col = 0; col < gridCols; col++) {
+                    const key = getGridKey(col, flippedRow);
+                    if (!locked.has(key)) {
+                        const pea = {
+                            x: col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            y: flippedRow * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            col,
+                            row: flippedRow,
+                            colorIndex: Math.floor(Math.random() * peaColors.length),
+                            settled: true,
+                            isGreen: false
+                        };
+                        settledPeas.push(pea);
+                        occupyGrid(col, flippedRow);
+                    }
+                }
+            }
+
+            // Fill all remaining rows below Part B (golden peas only)
+            for (let row = extraRowsAbove; row < totalRows; row++) {
+                for (let col = 0; col < gridCols; col++) {
+                    const key = getGridKey(col, row);
+                    if (!locked.has(key)) {
+                        const pea = {
+                            x: col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            y: row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            col,
+                            row,
+                            colorIndex: Math.floor(Math.random() * peaColors.length),
+                            settled: true,
+                            isGreen: false
+                        };
+                        settledPeas.push(pea);
+                        occupyGrid(col, row);
+                    }
+                }
+            }
+
+            // Resize and enable scrolling
+            canvas.height = totalHeight;
+            gridRows = totalRows;
+            document.body.style.overflow = 'scroll';
+            animationComplete = true;
+
+            // Fill the expanded area with grey background
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw the complete stack (golden peas only in the new top area)
+            draw();
+            
+            // Paste the preserved visible snapshot at the bottom (includes calendars, top bar, green peas, etc.)
+            const pasteY = totalHeight - visibleHeight;
+            ctx.putImageData(visibleSnapshot, 0, pasteY);
+
+            const targetScrollY = document.documentElement.scrollHeight - window.innerHeight;
+            window.scrollTo(0, targetScrollY);
+
+            setTimeout(() => {
+                scrollIndicator.classList.remove('hidden');
+                scrollIndicator.innerHTML = 'Nach oben scrollen um deinen ganzen Reichtum zu entdecken';
+            }, 100);
+        }
+
+        function initializeSpawnOrder() {
+            columnsToSpawn = [];
+            for (let i = 0; i < TOTAL_PEAS; i++) columnsToSpawn.push(i % gridCols);
+            for (let i = columnsToSpawn.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [columnsToSpawn[i], columnsToSpawn[j]] = [columnsToSpawn[j], columnsToSpawn[i]];
+            }
+        }
+        initializeSpawnOrder();
+
+        function getGridKey(col, row) { return `${col},${row}`; }
+        function isGridOccupied(col, row) { if (row >= gridRows) return true; if (col < 0 || col >= gridCols) return true; return occupiedGrid.has(getGridKey(col, row)); }
+        function occupyGrid(col, row) { occupiedGrid.add(getGridKey(col, row)); }
+
+        function activateGreenPea(greenPea) {
+            // Find all green peas in this column and neighboring columns at or below this row
+            const columnsToCheck = [greenPea.col - 1, greenPea.col, greenPea.col + 1];
+            
+            const greenPeasToActivate = settledPeas.filter(p => 
+                p.isGreen && columnsToCheck.includes(p.col) && p.row >= greenPea.row
+            );
+            
+            // Sort by row (top to bottom) to activate in order
+            greenPeasToActivate.sort((a, b) => a.row - b.row);
+            
+            // Activate all of them
+            for (const pea of greenPeasToActivate) {
+                // Remove from settled peas
+                const index = settledPeas.indexOf(pea);
+                if (index > -1) {
+                    settledPeas.splice(index, 1);
+                }
+                
+                // Clear its grid position
+                occupiedGrid.delete(getGridKey(pea.col, pea.row));
+                
+                // Mark as active and falling
+                pea.settled = false;
+                pea.isFalling = true;
+                
+                // Add methods to make it behave like a Pea instance
+                pea.update = Pea.prototype.update;
+                pea.settleInGrid = Pea.prototype.settleInGrid;
+                
+                // Add to active peas array
+                peas.push(pea);
+            }
+        }
+
+        class Pea {
+            constructor(col) { 
+                this.col = col; 
+                this.x = col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2; 
+                this.y = -PEA_RADIUS - Math.random() * 600; 
+                this.settled = false;
+                this.isGreen = false;
+                this.isFalling = false;
+            }
+            update() {
+                if (this.settled) return;
+                this.y += FALL_SPEED;
+                const currentRow = Math.floor(this.y / GRID_CELL_SIZE);
+                
+                // Check if at bottom edge
+                if (currentRow >= gridRows - 1) {
+                    this.settleInGrid(this.col, gridRows - 1);
+                    return;
+                }
+                
+                // For golden peas, activate any green peas they pass through
+                if (!this.isGreen) {
+                    const greenPeaInCurrentRow = settledPeas.find(p => 
+                        p.isGreen && p.col === this.col && p.row === currentRow
+                    );
+                    if (greenPeaInCurrentRow) {
+                        activateGreenPea(greenPeaInCurrentRow);
+                    }
+                }
+                
+                // Check what's in the next row (only settle if it's a non-green occupied space)
+                const nextRow = currentRow + 1;
+                const nextRowHasNonGreenPea = settledPeas.find(p => 
+                    !p.isGreen && p.col === this.col && p.row === nextRow
+                );
+                
+                // Only settle if hitting a golden pea or at the edge
+                if (nextRowHasNonGreenPea) {
+                    this.settleInGrid(this.col, currentRow);
+                }
+            }
+            settleInGrid(col, row) {
+                // Find first available spot
+                if (isGridOccupied(col, row)) {
+                    for (let r = row; r >= -4; r--) { 
+                        if (!isGridOccupied(col, r)) { 
+                            row = r; 
+                            break; 
+                        } 
+                    }
+                }
+                this.x = col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                this.y = row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                this.row = row;
+                this.settled = true;
+                this.isFalling = false;
+                occupyGrid(col, row);
+            }
+        }
+
+        let peas = [];
+        let settledPeas = [];
+        let spawnedCount = 0;
+        let frameCount = 0;
+        let currentYear = 1;
+        let currentMoney = 0;
+        let erbsenNotification = null; // { text, opacity, offsetY, startTime }
+        const peaColors = ['#FFEB3B', '#FFD54F', '#FFCA28', '#FFC107', '#FFB300'];
+        const greenPeaColors = ['#7CB342', '#8BC34A', '#9CCC65', '#AED581', '#689F38'];
+
+        // Calculate green pea spawn area (peas start 10 rows from bottom, background goes to edge)
+        function getGreenPeaArea() {
+            const startRow = gridRows - 10; // Start 10 rows from bottom
+            const endRow = gridRows; // Background goes to bottom edge
+            return { 
+                startRow, 
+                endRow,
+                bgStartRow: startRow - 1 // Background starts 1 row above for padding
+            };
+        }
+
+        function initializeGreenPeas() {
+            // Place 3 rows of green peas in lower third of screen, excluding border columns
+            const lowerThirdStartRow = Math.floor(gridRows * 2 / 3);
+            const startRow = lowerThirdStartRow;
+            const endRow = startRow + 3;
+            
+            // Exclude ~10% of columns from each side
+            const marginCols = Math.floor(gridCols * 0.1);
+            const startCol = marginCols;
+            const endCol = gridCols - marginCols;
+            
+            for (let row = startRow; row < endRow && row < gridRows; row++) {
+                for (let col = startCol; col < endCol; col++) {
+                    const pea = {
+                        x: col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                        y: row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                        col: col,
+                        row: row,
+                        colorIndex: Math.floor(Math.random() * greenPeaColors.length),
+                        settled: true,
+                        isGreen: true
+                    };
+                    settledPeas.push(pea);
+                    occupyGrid(col, row);
+                }
+            }
+        }
+        
+        function addFourGreenPeas() {
+            // Calculate green pea area (with 5 rows spacing at bottom)
+            const greenArea = getGreenPeaArea();
+            const lowerQuarterStartRow = greenArea.startRow;
+            const maxRow = greenArea.endRow;
+            
+            // Add padding of 2 peas on each side
+            const marginCols = 2;
+            const startCol = marginCols;
+            const endCol = gridCols - marginCols;
+            const availableCols = endCol - startCol;
+            
+            // Add 4 green peas with staggered timing
+            for (let i = 0; i < 4; i++) {
+                const currentIndex = greenPeaPlacementIndex + i;
+                setTimeout(() => {
+                    const colOffset = currentIndex % availableCols;
+                    const col = startCol + colOffset;
+                    const row = lowerQuarterStartRow + Math.floor(currentIndex / availableCols);
+                    
+                    if (row >= maxRow) {
+                        alert('Green pea area is full!');
+                        return;
+                    }
+                    
+                    // Check if already occupied
+                    if (!isGridOccupied(col, row)) {
+                        const pea = {
+                            x: col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            y: row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            col: col,
+                            row: row,
+                            colorIndex: Math.floor(Math.random() * greenPeaColors.length),
+                            settled: true,
+                            isGreen: true,
+                            isPulsating: true,
+                            pulseTime: 0,
+                            pulseDuration: 6,
+                            baseRadius: PEA_RADIUS
+                        };
+                        settledPeas.push(pea);
+                        occupyGrid(col, row);
+                        
+                        // Add money (1000 per green pea)
+                        currentMoney += 1000;
+                        
+                        // Animate pulsation
+                        const pulseInterval = setInterval(() => {
+                            pea.pulseTime++;
+                            if (pea.pulseTime >= pea.pulseDuration) {
+                                pea.isPulsating = false;
+                                clearInterval(pulseInterval);
+                            }
+                            draw();
+                        }, 16);
+                    }
+                }, i * 25);
+            }
+            
+            greenPeaPlacementIndex += 4;
+            
+            // Trigger "+4 Erbsen" notification animation
+            erbsenNotification = {
+                text: '+4 Erbsen',
+                opacity: 1.0,
+                offsetY: 0,
+                startTime: performance.now(),
+                isNegative: false
+            };
+        }
+        
+        function removeFiveGreenPeas() {
+            // Find first 5 green peas (from top-left)
+            const greenPeas = settledPeas.filter(p => p.isGreen);
+            if (greenPeas.length === 0) {
+                alert('No green peas to remove!');
+                return;
+            }
+            
+            // Sort by row then column (top-left first)
+            greenPeas.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+            
+            const peasToRemove = greenPeas.slice(0, Math.min(5, greenPeas.length));
+            const actualRemoveCount = peasToRemove.length;
+            
+            // Mark peas for blinking
+            peasToRemove.forEach(pea => {
+                pea.isBlinking = true;
+                pea.blinkStartTime = performance.now();
+            });
+            
+            // Trigger "-5 Erbsen" notification when blinking starts
+            erbsenNotification = {
+                text: `-${actualRemoveCount} Erbsen`,
+                opacity: 1.0,
+                offsetY: 0,
+                startTime: performance.now(),
+                isNegative: true
+            };
+            
+            // After blinking, remove peas and reposition
+            setTimeout(() => {
+                // Remove the peas
+                peasToRemove.forEach(pea => {
+                    const index = settledPeas.indexOf(pea);
+                    if (index > -1) {
+                        settledPeas.splice(index, 1);
+                        occupiedGrid.delete(getGridKey(pea.col, pea.row));
+                    }
+                });
+                
+                // Subtract money
+                currentMoney -= actualRemoveCount * 1000;
+                
+                // Reposition remaining green peas to fill gaps
+                repositionGreenPeas();
+                
+                // Update placement index to reflect actual number of green peas
+                const remainingGreenPeas = settledPeas.filter(p => p.isGreen).length;
+                greenPeaPlacementIndex = remainingGreenPeas;
+            }, 500); // Blink for 500ms
+        }
+        
+        function repositionGreenPeas() {
+            const greenArea = getGreenPeaArea();
+            const lowerQuarterStartRow = greenArea.startRow;
+            const marginCols = 2;
+            const startCol = marginCols;
+            const endCol = gridCols - marginCols;
+            const availableCols = endCol - startCol;
+            
+            // Get all green peas
+            const greenPeas = settledPeas.filter(p => p.isGreen);
+            
+            // Clear their old positions
+            greenPeas.forEach(pea => {
+                occupiedGrid.delete(getGridKey(pea.col, pea.row));
+            });
+            
+            // Sort by current position (to maintain relative order)
+            greenPeas.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+            
+            // Reposition them sequentially from top-left
+            greenPeas.forEach((pea, index) => {
+                const colOffset = index % availableCols;
+                const col = startCol + colOffset;
+                const row = lowerQuarterStartRow + Math.floor(index / availableCols);
+                
+                // Animate smooth transition
+                pea.targetX = col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                pea.targetY = row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                pea.isMoving = true;
+                pea.moveStartTime = performance.now();
+                pea.startX = pea.x;
+                pea.startY = pea.y;
+                pea.targetCol = col;
+                pea.targetRow = row;
+            });
+        }
+        
+        // Don't auto-initialize in manual mode
+
+        function spawnPeas() {
+            const rate = Math.min(SPAWN_RATE, TOTAL_PEAS - spawnedCount);
+            const MIN_SPAWN_GAP = 1;
+            let spawned = 0; let attempts = 0; const maxAttempts = rate * 3;
+            while (spawned < rate && spawnedCount < TOTAL_PEAS && attempts < maxAttempts) {
+                attempts++;
+                const col = columnsToSpawn[currentBatchIndex % columnsToSpawn.length];
+                const lastSpawn = lastSpawnTime.get(col) || -Infinity;
+                if (frameCount - lastSpawn >= MIN_SPAWN_GAP) { peas.push(new Pea(col)); lastSpawnTime.set(col, frameCount); spawnedCount++; spawned++; }
+                currentBatchIndex++;
+            }
+        }
+
+        function update() {
+            // Handle calendar cleaning progress (needs to work even when paused)
+            if (isCleaningInProgress && currentActiveMonth < 12) {
+                // Update the active calendar's progress based on its scrubbing distance
+                const calendar = calendars[currentActiveMonth];
+                calendar.progress = Math.min(calendar.scrubbingDistance / DISTANCE_PER_PROGRESS, 1);
+                
+                if (calendar.progress >= 1) {
+                    // Cleaning complete!
+                    calendar.isClean = true;
+                    calendar.isDirty = false;
+                    isCleaningInProgress = false;
+                    
+                    // Add 4 green peas
+                    addFourGreenPeas();
+                    
+                    // Track yearly income
+                    yearlyPeasEarned += 4;
+                    
+                    // Move to next month
+                    currentActiveMonth++;
+                    
+                    // Check for heritage event first (only from year 2 onwards, and only once)
+                    if (currentYear >= 2 && !heritageEventTriggered && currentActiveMonth <= 12) {
+                        // Calculate probability based on current month
+                        heritageEventProbability = currentActiveMonth * HERITAGE_BASE_PROBABILITY;
+                        
+                        // Roll for heritage event
+                        if (Math.random() < heritageEventProbability) {
+                            // Heritage event triggered!
+                            setTimeout(() => {
+                                showHeritagePopup();
+                            }, 500);
+                            return; // Don't check for regular tax event
+                        }
+                    }
+                    
+                    // Check if all 12 calendars are cleaned (regular tax event)
+                    if (currentActiveMonth >= 12) {
+                        // All calendars cleaned! Show tax popup
+                        setTimeout(() => {
+                            showTaxPopup();
+                        }, 500);
+                    }
+                }
+            }
+            
+            if (animationComplete || animationPaused) return;
+            
+            if (!manualMode && isScreenFull()) { animationPaused = true; console.log("Required above-screen rows filled â€” transitioning to complete stack..."); requestAnimationFrame(() => { generateCompleteStack(); }); return; }
+            frameCount++;
+            if (!manualMode && spawnedCount < TOTAL_PEAS) spawnPeas();
+            const stillActive = [];
+            for (let i = 0; i < peas.length; i++) { const pea = peas[i]; pea.update(); if (pea.settled) settledPeas.push(pea); else stillActive.push(pea); }
+            peas = stillActive;
+        }
+
+        function drawCalendars(startY, endY) {
+            const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
+                                'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+            
+            const availableHeight = endY - startY;
+            const availableWidth = canvas.width;
+            const padding = 15;
+            
+            // Calculate optimal grid layout (rows x cols)
+            let bestLayout = { rows: 3, cols: 4 }; // Default: 3 rows, 4 cols
+            
+            // Try different layouts to find the best fit
+            const layouts = [
+                { rows: 2, cols: 6 },
+                { rows: 3, cols: 4 },
+                { rows: 4, cols: 3 },
+                { rows: 6, cols: 2 }
+            ];
+            
+            let maxCalendarSize = 0;
+            for (const layout of layouts) {
+                const calWidth = (availableWidth - padding * (layout.cols + 1)) / layout.cols;
+                const calHeight = (availableHeight - padding * (layout.rows + 1)) / layout.rows;
+                const calSize = Math.min(calWidth, calHeight);
+                
+                if (calSize > maxCalendarSize) {
+                    maxCalendarSize = calSize;
+                    bestLayout = layout;
+                }
+            }
+            
+            const { rows, cols } = bestLayout;
+            const calWidth = (availableWidth - padding * (cols + 1)) / cols;
+            const calHeight = (availableHeight - padding * (rows + 1)) / rows;
+            const calSize = Math.min(calWidth, calHeight);
+            
+            // Calculate total grid dimensions
+            const totalGridWidth = cols * calSize + (cols - 1) * padding;
+            const totalGridHeight = rows * calSize + (rows - 1) * padding;
+            
+            // Center the entire grid vertically and horizontally
+            const gridOffsetX = (availableWidth - totalGridWidth) / 2;
+            const gridOffsetY = (availableHeight - totalGridHeight) / 2;
+            
+            // Draw each calendar
+            for (let i = 0; i < 12; i++) {
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                
+                const x = gridOffsetX + col * (calSize + padding);
+                const y = startY + gridOffsetY + row * (calSize + padding);
+                
+                drawCalendar(x, y, calSize, monthNames[i], i);
+            }
+        }
+        
+        function drawCalendar(x, y, size, monthName, monthIndex) {
+            // Store calendar position for collision detection
+            if (!calendars[monthIndex]) {
+                calendars[monthIndex] = {
+                    x, y, size, monthName, monthIndex,
+                    isClean: false,
+                    isDirty: true,
+                    progress: 0, // Individual progress for this calendar
+                    scrubbingDistance: 0 // Individual scrubbing distance for this calendar
+                };
+            } else {
+                calendars[monthIndex].x = x;
+                calendars[monthIndex].y = y;
+                calendars[monthIndex].size = size;
+            }
+            
+            const calendar = calendars[monthIndex];
+            
+            // Days in each month (non-leap year)
+            const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            const maxDays = daysInMonth[monthIndex];
+            
+            // Calendar background
+            if (calendar.isClean) {
+                // Completed: dark grey background
+                ctx.fillStyle = '#4a4a4a';
+            } else {
+                // Not completed: white/light background
+                ctx.fillStyle = '#f5f5f5';
+            }
+            ctx.fillRect(x, y, size, size);
+            
+            // Darken if not the current active month and not yet clean
+            if (monthIndex > currentActiveMonth && !calendar.isClean) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(x, y, size, size);
+            }
+            
+            // Calendar header
+            const headerHeight = size * 0.25;
+            if (calendar.isClean) {
+                // Completed: even darker grey header for better contrast
+                ctx.fillStyle = '#1a1a1a';
+            } else {
+                // Not completed: red header
+                ctx.fillStyle = '#d32f2f';
+            }
+            ctx.fillRect(x, y, size, headerHeight);
+            
+            // Month name on header
+            if (calendar.isClean) {
+                // Completed: darker grey text
+                ctx.fillStyle = '#757575';
+            } else {
+                ctx.fillStyle = '#ffffff';
+            }
+            ctx.font = `bold ${Math.max(11, size * 0.14)}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(monthName, x + size / 2, y + headerHeight / 2);
+            
+            // Binding rings effect at top
+            const ringRadius = size * 0.04;
+            const ringY = y + size * 0.02;
+            if (calendar.isClean) {
+                ctx.fillStyle = '#1a1a1a';
+            } else {
+                ctx.fillStyle = '#4a4a4a';
+            }
+            for (let i = 0; i < 2; i++) {
+                const ringX = x + size * (0.3 + i * 0.4);
+                ctx.beginPath();
+                ctx.arc(ringX, ringY, ringRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Calendar body (only show day numbers if not completed)
+            if (!calendar.isClean) {
+                const gridStartY = y + headerHeight + size * 0.08;
+                const gridWidth = size * 0.85;
+                const gridHeight = size * 0.6;
+                const gridStartX = x + (size - gridWidth) / 2;
+                const cellWidth = gridWidth / 7;
+                const cellHeight = gridHeight / 5;
+                
+                ctx.font = `${Math.max(8, size * 0.09)}px Arial, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Draw day numbers (only up to maxDays for this month)
+                let dayNum = 1;
+                for (let row = 0; row < 5; row++) {
+                    for (let col = 0; col < 7; col++) {
+                        if (dayNum <= maxDays) {
+                            const cellX = gridStartX + col * cellWidth;
+                            const cellY = gridStartY + row * cellHeight;
+                            
+                            // Alternate slight grey for some visual interest
+                            if ((row + col) % 2 === 0) {
+                                ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+                                ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
+                            }
+                            
+                            // Day number
+                            ctx.fillStyle = '#4a4a4a';
+                            ctx.fillText(dayNum.toString(), cellX + cellWidth / 2, cellY + cellHeight / 2);
+                            dayNum++;
+                        }
+                    }
+                }
+            }
+            
+            // Draw dirt overlay if dirty (with progressive opacity reduction during cleaning)
+            if (calendar.isDirty && !calendar.isClean) {
+                // Calculate dirt opacity based on cleaning progress (use calendar's stored progress)
+                let dirtOpacity = 1.0;
+                if (monthIndex === currentActiveMonth) {
+                    dirtOpacity = 1.0 - calendar.progress; // Use individual calendar progress
+                }
+                
+                ctx.fillStyle = `rgba(139, 90, 43, ${0.4 * dirtOpacity})`; // Brown semi-transparent dirt
+                ctx.fillRect(x, y, size, size);
+                
+                // Add some dirt spots with reduced opacity
+                ctx.fillStyle = `rgba(101, 67, 33, ${0.3 * dirtOpacity})`;
+                for (let i = 0; i < 8; i++) {
+                    const spotX = x + (Math.sin(i * 2.3) * 0.5 + 0.5) * size;
+                    const spotY = y + (Math.cos(i * 1.7) * 0.5 + 0.5) * size;
+                    const spotRadius = size * 0.08 * (0.5 + Math.sin(i) * 0.5);
+                    ctx.beginPath();
+                    ctx.arc(spotX, spotY, spotRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Draw green checkmark if completed (centered in lower part)
+            if (calendar.isClean) {
+                ctx.strokeStyle = '#4CAF50';
+                ctx.lineWidth = Math.max(4, size * 0.03);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // Center in the lower part (below the header)
+                const lowerPartStartY = y + headerHeight;
+                const lowerPartHeight = size - headerHeight;
+                const lowerPartCenterY = lowerPartStartY + lowerPartHeight / 2;
+                
+                const checkSize = size * 0.3;
+                const checkX = x + size / 2 - checkSize / 3;
+                const checkY = lowerPartCenterY;
+                
+                ctx.beginPath();
+                ctx.moveTo(checkX, checkY);
+                ctx.lineTo(checkX + checkSize / 3, checkY + checkSize / 3);
+                ctx.lineTo(checkX + checkSize, checkY - checkSize / 2);
+                ctx.stroke();
+            }
+            
+            // Draw progress bar if currently being cleaned OR has partial progress
+            if (monthIndex === currentActiveMonth && calendar.progress > 0 && !calendar.isClean) {
+                const barHeight = size * 0.06;
+                const barY = y + size - barHeight - size * 0.05;
+                const barX = x + size * 0.1;
+                const barWidth = size * 0.8;
+                
+                // Background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                
+                // Progress (use calendar's stored progress)
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(barX, barY, barWidth * calendar.progress, barHeight);
+                
+                // Border
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#2a2a2a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw top bar background
+            ctx.fillStyle = 'rgba(30, 30, 30, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, 42);
+            
+            // Draw top bar text
+            ctx.font = 'bold 18px Arial, sans-serif';
+            ctx.textBaseline = 'middle';
+            
+            // Year display (left)
+            ctx.fillStyle = '#7CB342';
+            ctx.textAlign = 'center';
+            ctx.fillText('Jahr ' + currentYear, canvas.width / 2, 21);
+            
+            // Draw calendars between top bar and Erbsen-Bank
+            const greenArea = getGreenPeaArea();
+            const bgStartY = greenArea.bgStartRow * GRID_CELL_SIZE;
+            drawCalendars(42, bgStartY - 20); // Start after top bar, end before Erbsen-Bank
+            
+            // Initialize sponge position on first draw if calendars exist
+            if (calendars.length > 0 && sponge.x === 0 && sponge.y === 0) {
+                const januaryCalendar = calendars[0];
+                if (januaryCalendar) {
+                    sponge.x = januaryCalendar.x + januaryCalendar.size / 2;
+                    sponge.y = januaryCalendar.y + januaryCalendar.size / 2; // On top of January (center)
+                }
+            }
+            
+            // Draw greenish background for green pea area (with padding above)
+            const bgEndY = greenArea.endRow * GRID_CELL_SIZE;
+            const bgHeight = bgEndY - bgStartY;
+            ctx.fillStyle = 'rgba(124, 179, 66, 0.15)'; // Semi-transparent green
+            ctx.fillRect(0, bgStartY, canvas.width, bgHeight);
+            
+            // Draw "Erbsen-Bank" label
+            const marginCols = 2;
+            const labelX = canvas.width - (marginCols * GRID_CELL_SIZE);
+            const labelY = bgStartY - 5; // 5px above the background
+            ctx.fillStyle = '#7CB342'; // Green color
+            ctx.font = '18px Arial, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('Erbsen-Bank', labelX, labelY);
+
+            // Draw green pea value indicator ("pea = 1'000")
+            (function drawPeaValueIndicator() {
+            const peaX = canvas.width - 90;   // horizontal position
+            const peaY = canvas.height - 20;;        // just below Erbsen-Bank
+
+            // Draw real-money counter in Erbsen-Bank (bottom-left)
+            (function drawMoneyCounter() {
+
+                const moneyX = marginCols * GRID_CELL_SIZE;     // left side of the green-pea area
+                const moneyY = canvas.height - 20;              // same vertical position as the pea value text
+
+                // Draw CHF money text like the pea-value text
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+
+                ctx.fillText(
+                    currentMoney.toLocaleString('de-CH') + ".-", 
+                    moneyX, 
+                    moneyY
+                );
+            })();
+
+
+            // Draw pea (same as green peas in game)
+            ctx.fillStyle = greenPeaColors[0];
+            ctx.beginPath();
+            ctx.arc(peaX, peaY, PEA_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw text
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("= 1'000.-", peaX + PEA_RADIUS + 8, peaY);
+            })();
+
+            
+            // Draw "+4 Erbsen" notification animation
+            if (erbsenNotification) {
+                const elapsed = performance.now() - erbsenNotification.startTime;
+                const duration = 1000; // 1 second (faster - was 1500ms)
+                
+                if (elapsed < duration) {
+                    // Animate upward and fade out
+                    const progress = elapsed / duration;
+                    erbsenNotification.offsetY = progress * 40; // Move up 40px
+                    erbsenNotification.opacity = 1 - progress; // Fade out
+                    
+                    ctx.save();
+                    // Green for positive, red for negative
+                    const color = erbsenNotification.isNegative ? '211, 47, 47' : '124, 179, 66';
+                    ctx.fillStyle = `rgba(${color}, ${erbsenNotification.opacity})`;
+                    ctx.font = 'bold 20px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'bottom';
+                    const notificationX = marginCols * GRID_CELL_SIZE;
+                    ctx.fillText(erbsenNotification.text, notificationX, labelY + 0 - erbsenNotification.offsetY); // Start lower (was labelY - 10)
+                    ctx.restore();
+                } else {
+                    // Animation complete
+                    erbsenNotification = null;
+                }
+            }
+            
+            // Draw settled green peas
+            for (let colorIdx = 0; colorIdx < greenPeaColors.length; colorIdx++) {
+                ctx.fillStyle = greenPeaColors[colorIdx]; ctx.beginPath();
+                for (let i = 0; i < settledPeas.length; i++) {
+                    const pea = settledPeas[i];
+                    if (pea.isGreen) {
+                        // Handle smooth movement animation
+                        if (pea.isMoving) {
+                            const elapsed = performance.now() - pea.moveStartTime;
+                            const moveDuration = 300; // 300ms smooth transition
+                            if (elapsed < moveDuration) {
+                                const progress = elapsed / moveDuration;
+                                // Ease out function for smooth deceleration
+                                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                                pea.x = pea.startX + (pea.targetX - pea.startX) * easeProgress;
+                                pea.y = pea.startY + (pea.targetY - pea.startY) * easeProgress;
+                            } else {
+                                // Animation complete
+                                pea.x = pea.targetX;
+                                pea.y = pea.targetY;
+                                pea.col = pea.targetCol;
+                                pea.row = pea.targetRow;
+                                pea.isMoving = false;
+                                occupyGrid(pea.col, pea.row);
+                            }
+                        }
+                        
+                        // Skip drawing if blinking (will be drawn red separately)
+                        if (pea.isBlinking) continue;
+                        
+                        const peaColorIdx = pea.colorIndex !== undefined ? pea.colorIndex : i % greenPeaColors.length;
+                        if (peaColorIdx === colorIdx) { 
+                            // Calculate radius with pulse effect
+                            let radius = PEA_RADIUS;
+                            if (pea.isPulsating && pea.pulseDuration > 0) {
+                                // Pulse from 0.5x to 1.3x and back to 1x
+                                const progress = Math.min(pea.pulseTime / pea.pulseDuration, 1);
+                                const pulseScale = progress < 0.5 
+                                    ? 0.5 + (progress * 2) * 0.8  // 0.5 -> 1.3
+                                    : 1.3 - ((progress - 0.5) * 2) * 0.3; // 1.3 -> 1.0
+                                radius = PEA_RADIUS * pulseScale;
+                            }
+                            // Ensure radius is positive
+                            radius = Math.max(0.1, radius);
+                            ctx.moveTo(pea.x + radius, pea.y); 
+                            ctx.arc(pea.x, pea.y, radius, 0, Math.PI * 2); 
+                        }
+                    }
+                }
+                // Draw falling green peas
+                for (let i = 0; i < peas.length; i++) {
+                    const pea = peas[i];
+                    if (pea.isGreen) {
+                        const peaColorIdx = pea.colorIndex !== undefined ? pea.colorIndex : i % greenPeaColors.length;
+                        if (peaColorIdx === colorIdx) { ctx.moveTo(pea.x + PEA_RADIUS, pea.y); ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2); }
+                    }
+                }
+                ctx.fill();
+            }
+            
+            // Draw blinking red peas (peas being removed)
+            ctx.fillStyle = '#d32f2f';
+            ctx.beginPath();
+            for (let i = 0; i < settledPeas.length; i++) {
+                const pea = settledPeas[i];
+                if (pea.isBlinking) {
+                    const elapsed = performance.now() - pea.blinkStartTime;
+                    const blinkCycle = Math.floor(elapsed / 100); // Blink every 100ms
+                    if (blinkCycle % 2 === 0) { // Show on even cycles
+                        ctx.moveTo(pea.x + PEA_RADIUS, pea.y);
+                        ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2);
+                    }
+                }
+            }
+            ctx.fill();
+            
+            // Draw sponge (🧽 emoji) - LAST so it's on top of everything
+            const spongeSize = 60;
+            ctx.font = `${spongeSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Tutorial animation - wiggle sponge if tutorial is showing
+            let spongeDisplayX = sponge.x;
+            let spongeDisplayY = sponge.y;
+            if (showTutorial && calendars[0] && !sponge.isDragging) {
+                // Animate sponge wiggling left-right
+                const elapsed = performance.now() - tutorialStartTime;
+                const animDuration = 800; // 0.8 second cycle
+                const cycle = (elapsed % animDuration) / animDuration;
+                
+                // Simple left-right wiggle using sine wave
+                const wiggleProgress = Math.sin(cycle * Math.PI * 2); // Oscillates between -1 and 1
+                
+                // Small horizontal wiggle
+                const wiggleAmplitude = 10; 
+                spongeDisplayX = sponge.x + wiggleProgress * wiggleAmplitude;
+            }
+            
+            // Set opacity to 100%
+            if (spongeVisible) {
+                ctx.globalAlpha = 1.0;
+                ctx.fillText('🧽', spongeDisplayX, spongeDisplayY);
+                ctx.globalAlpha = 1.0; // Reset to default
+            }
+    
+
+
+   
+
+
+            // Draw golden peas
+            for (let colorIdx = 0; colorIdx < peaColors.length; colorIdx++) {
+                ctx.fillStyle = peaColors[colorIdx]; ctx.beginPath();
+                for (let i = 0; i < settledPeas.length; i++) {
+                    const pea = settledPeas[i];
+                    if (!pea.isGreen) {
+                        const peaColorIdx = pea.colorIndex !== undefined ? pea.colorIndex : i % peaColors.length;
+                        if (peaColorIdx === colorIdx) { ctx.moveTo(pea.x + PEA_RADIUS, pea.y); ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2); }
+                    }
+                }
+                for (let i = 0; i < peas.length; i++) {
+                    const pea = peas[i]; 
+                    if (!pea.isGreen && i % peaColors.length === colorIdx) { 
+                        ctx.moveTo(pea.x + PEA_RADIUS, pea.y); ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2); 
+                    }
+                }
+                ctx.fill();
+            }
+            
+
+
+
+            // Draw horizontal indicator lines every 10,000 peas
+            if (animationComplete) {
+                const rowsPer10k = Math.floor(10000 / gridCols);
+
+                ctx.strokeStyle = "rgba(0,0,0,0.75)";
+                ctx.lineWidth = 5;
+                ctx.fillStyle = "rgba(0,0,0,0.75)";
+                ctx.font = "bold 16px Arial";
+                ctx.textAlign = "left";
+                ctx.textBaseline = "middle";
+
+                for (let row = rowsPer10k; row < (gridRows - rowsPer10k); row += rowsPer10k) {
+
+                    // Flipped Y coordinate because your stack grows upward visually
+                    const y = (gridRows - row) * GRID_CELL_SIZE;
+
+                    // Draw the line
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+
+                    // Rounded label
+                    const peasAtThisLine = row * gridCols;
+                    const rounded = Math.round(peasAtThisLine / 10000) * 10000;
+                    const label = rounded.toLocaleString('de-CH');
+
+                    // ------ Draw Label Background Box ------
+
+                    const paddingX = 6;   // horizontal padding
+                    const paddingY = 2;   // vertical padding
+                    const offsetY  = -10; // move box + text above the line
+
+                    const textWidth = ctx.measureText(label).width;
+                    const boxX = 5 - paddingX;
+                    const boxY = y - (16 + paddingY * 2);
+
+                    const boxWidth = textWidth + paddingX * 2;
+                    const boxHeight = 16 + paddingY * 2; // matches your 16px font size
+
+                    // background box
+                    ctx.fillStyle = "rgba(0,0,0,0.75)";
+                    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+                    // Draw the text 
+                    ctx.fillStyle = "rgba(255,255,255,1)";
+                    ctx.fillText(label, 5, y + offsetY);
+                }
+            }
+
+            
+
+            
+            
+            // --- TUTORIAL BOX RENDERING (NO ROUNDED CORNERS) -----------------------------
+            if (showTutorial) {
+
+                // Select text lines depending on tutorial phase
+                let tutorialLines = (tutorialPhase === 1)
+                    ? [
+                        "Schrubbe mit dem Schwamm über die schmutzigen",
+                        "Kalender, um sie zu reinigen!"
+                    ]
+                    : [
+                        "Die Krankenkassenprämien sind um 20% gestiegen.",
+                        "Schaffst du es noch durch das 2. Jahr?"
+                    ];
+
+                // Fade / scale animation
+                const tutorialElapsed = performance.now() - tutorialStartTime;
+                const fadeInDuration = 500;
+                const animProgress = Math.min(tutorialElapsed / fadeInDuration, 1);
+                const easeProgress = 1 - Math.pow(1 - animProgress, 3);
+
+                ctx.save();
+                ctx.font = "bold 18px Arial, sans-serif";
+
+                // Measure longest line
+                let maxWidth = 0;
+                tutorialLines.forEach(line => {
+                    const w = ctx.measureText(line).width;
+                    if (w > maxWidth) maxWidth = w;
+                });
+
+                // Padding + auto-size box
+                const paddingX = 25;
+                const paddingY = 20;
+                const lineHeight = 24;
+
+                const tutorialBoxWidth = maxWidth + paddingX * 2;
+                const tutorialBoxHeight = tutorialLines.length * lineHeight + paddingY * 2;
+
+                // Center on screen
+                const tutorialBoxX = (canvas.width - tutorialBoxWidth) / 2;
+                const tutorialBoxY = (canvas.height - tutorialBoxHeight) / 2;
+
+                // Scale pop-in animation (0.8 → 1.0)
+                const scale = 0.8 + easeProgress * 0.2;
+                const scaledWidth = tutorialBoxWidth * scale;
+                const scaledHeight = tutorialBoxHeight * scale;
+                const scaledX = tutorialBoxX + (tutorialBoxWidth - scaledWidth) / 2;
+                const scaledY = tutorialBoxY + (tutorialBoxHeight - scaledHeight) / 2;
+
+                ctx.globalAlpha = easeProgress;
+
+                // BACKGROUND rectangle
+                ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+                ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
+                // BORDER rectangle
+                ctx.strokeStyle = "#4CAF50";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
+                // Draw centered text
+                ctx.fillStyle = "#ffffff";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                const centerX = scaledX + scaledWidth / 2;
+                let currentY = scaledY + scaledHeight / 2 - (tutorialLines.length - 1) * lineHeight / 2;
+
+                tutorialLines.forEach(line => {
+                    ctx.fillText(line, centerX, currentY);
+                    currentY += lineHeight;
+                });
+
+                ctx.restore();
+            }
+
+
+        }
+
+
+        let lastFrameTime = performance.now();
+        const targetFPS = 30;
+        const frameInterval = 1000 / targetFPS;
+        
+
+        function animate() { 
+            const currentTime = performance.now();
+            const deltaTime = currentTime - lastFrameTime;
+            
+            // Always animate if notification is active, cleaning in progress, tutorial showing, or animation is running
+            if (!animationComplete && deltaTime >= frameInterval) {
+                lastFrameTime = currentTime - (deltaTime % frameInterval);
+                update(); 
+                draw();
+            } else if (erbsenNotification || isCleaningInProgress || showTutorial) {
+                // Just redraw for notification, cleaning, or tutorial animation when paused
+                update(); // Still need to update cleaning progress
+                draw();
+            }
+            
+            requestAnimationFrame(animate); 
+        }
+        
+        function showTaxPopup() {
+            const overlay = document.getElementById('tax-overlay');
+            const popup = document.getElementById('tax-popup');
+            const text = document.getElementById('tax-popup-text');
+            const button = document.getElementById('tax-popup-button');
+            const title = document.getElementById('tax-popup-title');
+            
+            taxPopupStep = 1;
+            
+            // First message - show yearly peas earned (not money)
+            title.textContent = '🏛️ Steueramt';
+            text.textContent = `Wir sehen, sie haben dieses Jahr ${yearlyPeasEarned} Erbsen verdient. Dafür haben sie sicher hart gearbeitet?`;
+            button.textContent = 'Ja';
+            
+            overlay.classList.add('visible');
+            popup.classList.add('visible');
+        }
+        
+        function showHeritagePopup() {
+            const overlay = document.getElementById('tax-overlay');
+            const popup = document.getElementById('tax-popup');
+            const text = document.getElementById('tax-popup-text');
+            const button = document.getElementById('tax-popup-button');
+            const title = document.getElementById('tax-popup-title');
+            
+            taxPopupStep = 100; // Special code for heritage event
+            
+            title.textContent = '💰 Erbs-schaft';
+            text.innerHTML = 'Anruf von der Familie: Sie erhalten eine <b>Erbs-schaft von 50 Millionen CHF</b> (50\'000 Erbsen)';
+            button.textContent = 'OK';
+            
+            overlay.classList.add('visible');
+            popup.classList.add('visible');
+        }
+        
+        function showPostCascadeTaxPopup() {
+            const overlay = document.getElementById('tax-overlay');
+            const popup = document.getElementById('tax-popup');
+            const text = document.getElementById('tax-popup-text');
+            const button = document.getElementById('tax-popup-button');
+            const title = document.getElementById('tax-popup-title');
+            
+            taxPopupStep = 200; // Special code for post-cascade tax event
+            
+            title.textContent = '🏛️ Steueramt';
+            text.textContent = 'Wir sehen, sie haben auf einen Schlag 50\'000 Erbsen verdient. Dafür haben sie sicher hart gearbeitet?';
+            button.textContent = 'Nein';
+            button.classList.add('no-button');
+            
+            overlay.classList.add('visible');
+            popup.classList.add('visible');
+        }
+        
+        function handleTaxPopupButton() {
+            const overlay = document.getElementById('tax-overlay');
+            const popup = document.getElementById('tax-popup');
+            const text = document.getElementById('tax-popup-text');
+            const button = document.getElementById('tax-popup-button');
+            button.classList.remove('no-button');
+            
+            if (taxPopupStep === 100) {
+                // Heritage event - start cascade
+                overlay.classList.remove('visible');
+                popup.classList.remove('visible');
+                taxPopupStep = 0;
+                heritageEventTriggered = true;
+                currentMoney += 50000000
+                spongeVisible = false;
+                
+                // Start the cascade animation
+                manualMode = false;
+                animationPaused = false;
+                
+                // Mark that we should show special tax popup after cascade
+                setTimeout(() => {
+                    checkCascadeCompletion();
+                }, 100);
+                
+            } else if (taxPopupStep === 200) {
+                // Post-cascade tax event - first stage (Nein button)
+                taxPopupStep = 201;
+                text.textContent = 'Achso... dann interessiert uns das nicht.';
+                button.textContent = 'OK';
+                
+            } else if (taxPopupStep === 201) {
+                // Post-cascade tax event - second stage (OK button)
+                overlay.classList.remove('visible');
+                popup.classList.remove('visible');
+                taxPopupStep = 0;
+                
+                // Show restart button
+                document.getElementById('restart-btn').style.display = 'block';
+                
+            } else if (taxPopupStep === 1) {
+                // Show second message
+                taxPopupStep = 2;
+                text.innerHTML = 'Gerne verrechnen wir ihnen <b>5 Erbsen Einkommenssteuer.</b> Sie werden direkt von ihrem Konto abgebucht. Vielen Dank für ihren wertvollen Beitrag zu unserer Gesellschaft!';
+                button.textContent = 'OK';
+            } else if (taxPopupStep === 2) {
+                // Close popup and apply tax
+                overlay.classList.remove('visible');
+                popup.classList.remove('visible');
+                taxPopupStep = 0;
+                
+                // Remove 5 green peas
+                const greenPeas = settledPeas.filter(p => p.isGreen);
+                if (greenPeas.length >= 5) {
+                    // Sort by row then column (top-left first)
+                    greenPeas.sort((a, b) => {
+                        if (a.row !== b.row) return a.row - b.row;
+                        return a.col - b.col;
+                    });
+                    
+                    const peasToRemove = greenPeas.slice(0, 5);
+                    
+                    // Mark peas for blinking
+                    peasToRemove.forEach(pea => {
+                        pea.isBlinking = true;
+                        pea.blinkStartTime = performance.now();
+                    });
+                    
+                    // Trigger "-5 Erbsen" notification when blinking starts
+                    erbsenNotification = {
+                        text: '-5 Erbsen',
+                        opacity: 1.0,
+                        offsetY: 0,
+                        startTime: performance.now(),
+                        isNegative: true
+                    };
+                    
+                    // After blinking, remove peas and money
+                    setTimeout(() => {
+                        // Remove the peas
+                        peasToRemove.forEach(pea => {
+                            const index = settledPeas.indexOf(pea);
+                            if (index > -1) {
+                                settledPeas.splice(index, 1);
+                                occupiedGrid.delete(getGridKey(pea.col, pea.row));
+                            }
+                        });
+                        
+                        // Subtract money (5000 for 5 peas)
+                        currentMoney -= 5000;
+                        
+                        // Reposition remaining green peas
+                        repositionGreenPeas();
+                        
+                        // Update placement index
+                        const remainingGreenPeas = settledPeas.filter(p => p.isGreen).length;
+                        greenPeaPlacementIndex = remainingGreenPeas;
+                        
+                        // Reset calendars and increment year
+                        resetCalendarsForNewYear();
+                    }, 500);
+                }
+            }
+        }
+        
+        function resetCalendarsForNewYear() {
+            // Reset all calendars to dirty state and clear their progress
+            calendars.forEach(calendar => {
+                calendar.isClean = false;
+                calendar.isDirty = true;
+                calendar.progress = 0;
+                calendar.scrubbingDistance = 0;
+            });
+            
+            // Reset to January
+            currentActiveMonth = 0;
+            cleaningProgress = 0;
+            isCleaningInProgress = false;
+            scrubbingDistance = 0;
+            
+            // Reset yearly peas counter for next year
+            yearlyPeasEarned = 0;
+            
+            // Increment year
+            currentYear++;
+
+            // Trigger second tutorial at start of year 2
+            if (currentYear === 2) {
+                // Restore sponge to starting position (January calendar)
+                const january = calendars[0];
+                if (january) {
+                    sponge.x = january.x + january.size / 2;
+                    sponge.y = january.y + january.size / 2;
+                }
+
+                // Switch to tutorial phase 2  
+                tutorialPhase = 2;
+                tutorialShown = false;   // allow it to show again
+                showTutorial = true;     // show immediately
+                tutorialStartTime = performance.now();
+            }
+            
+            // Redraw to show new state
+            draw();
+        }
+        
+        function checkCascadeCompletion() {
+            // Check if animation has completed
+            if (animationComplete) {
+                // Animation already complete, show tax popup
+                setTimeout(() => {
+                    showPostCascadeTaxPopup();
+                }, postCascadeTaxDelay);
+            } else {
+                // Keep checking every 100ms
+                setTimeout(() => {
+                    checkCascadeCompletion();
+                }, 100);
+            }
+        }
+
+        function reset() {
+            peas = []; settledPeas = []; spawnedCount = 0; frameCount = 0; currentBatchIndex = 0; occupiedGrid.clear(); lastSpawnTime.clear(); initializeSpawnOrder();
+            animationComplete = false; 
+            manualMode = true;
+            animationPaused = manualMode;
+            greenPeaPlacementIndex = 0;
+            currentMoney = 0;
+            spongeVisible = true;
+            lastFrameTime = performance.now();
+            resetCanvasToViewport(); 
+            gridCols = calcGridCols(); 
+            gridRows = calcGridRows();
+            
+
+            // Reset year
+            currentYear = 1;
+
+            // Reset calendar and sponge state
+            calendars = [];
+            currentActiveMonth = 0;
+            cleaningProgress = 0;
+            isCleaningInProgress = false;
+            sponge = { x: 0, y: 0, isDragging: false, offsetX: 0, offsetY: 0 };
+            
+            // Reset scrubbing state
+            lastSpongeX = 0;
+            lastSpongeY = 0;
+            scrubbingDistance = 0;
+            
+            // Reset yearly peas counter
+            yearlyPeasEarned = 0;
+            
+            // Reset tutorial
+            tutorialShown = false;
+            showTutorial = false;
+            tutorialStartTime = performance.now();
+            if (tutorialTimeout) clearTimeout(tutorialTimeout);
+            startTutorialTimer();
+            
+            // Reset tax popup
+            taxPopupStep = 0;
+            document.getElementById('tax-overlay').classList.remove('visible');
+            document.getElementById('tax-popup').classList.remove('visible');
+            
+            // Reset heritage event state
+            heritageEventTriggered = false;
+            heritageEventProbability = 0;
+            
+            // Hide restart button
+            document.getElementById('restart-btn').style.display = 'none';
+            
+            document.body.style.overflow = 'hidden'; window.scrollTo({ top: 0, behavior: 'auto' }); scrollIndicator.classList.add('hidden'); 
+            draw(); // Draw empty canvas
+        }
+        
+        // Start tutorial timer
+        function startTutorialTimer() {
+            if (tutorialTimeout) clearTimeout(tutorialTimeout);
+            tutorialTimeout = setTimeout(() => {
+                if (!tutorialShown && currentActiveMonth === 0 && !calendars[0]?.isClean) {
+                    showTutorial = true;
+                    tutorialStartTime = performance.now();
+                }
+            }, TUTORIAL_DELAY);
+        }
+        
+        // Dismiss tutorial
+        function dismissTutorial() {
+            if (showTutorial) {
+                showTutorial = false;
+                tutorialShown = true;
+                if (tutorialTimeout) clearTimeout(tutorialTimeout);
+            }
+        }
+
+        function updateScrollIndicator() {
+            if (!animationComplete) { scrollIndicator.classList.add('hidden'); return; }
+            const scrollPosition = window.scrollY;
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            // Hide if scrolled up more than 100px from bottom
+            if (scrollPosition < maxScroll - 100) {
+                scrollIndicator.classList.add('hidden');
+            } else {
+                scrollIndicator.classList.remove('hidden');
+            }
+        }
+        
+        // Mouse/touch event handlers for sponge
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top + window.scrollY
+            };
+        }
+        
+        function isSpongeClicked(mouseX, mouseY) {
+            const spongeRadius = 30; // Half of sponge size (60/2)
+            const dx = mouseX - sponge.x;
+            const dy = mouseY - sponge.y;
+            return Math.sqrt(dx * dx + dy * dy) < spongeRadius;
+        }
+        
+        function checkSpongeCalendarCollision() {
+            if (currentActiveMonth >= 12) return false;
+            
+            const activeCalendar = calendars[currentActiveMonth];
+            if (!activeCalendar || activeCalendar.isClean) return false;
+            
+            // Check if sponge is over the active calendar
+            return sponge.x > activeCalendar.x && 
+                   sponge.x < activeCalendar.x + activeCalendar.size &&
+                   sponge.y > activeCalendar.y && 
+                   sponge.y < activeCalendar.y + activeCalendar.size;
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+            
+            // Dismiss tutorial on any click
+            dismissTutorial();
+            
+            if (isSpongeClicked(pos.x, pos.y)) {
+                sponge.isDragging = true;
+                sponge.offsetX = pos.x - sponge.x;
+                sponge.offsetY = pos.y - sponge.y;
+                canvas.style.cursor = 'grabbing';
+                
+                // Reset scrubbing tracking
+                lastSpongeX = sponge.x;
+                lastSpongeY = sponge.y;
+                
+                // Cancel tutorial timer when user starts interacting
+                if (tutorialTimeout) clearTimeout(tutorialTimeout);
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+            
+            if (sponge.isDragging) {
+                const newX = pos.x - sponge.offsetX;
+                const newY = pos.y - sponge.offsetY;
+                
+                // Calculate movement distance for scrubbing
+                if (lastSpongeX !== 0 && lastSpongeY !== 0) {
+                    const dx = newX - lastSpongeX;
+                    const dy = newY - lastSpongeY;
+                    const movementDistance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Only count significant movements
+                    if (movementDistance >= SCRUBBING_THRESHOLD) {
+                        // Check if over active calendar
+                        if (checkSpongeCalendarCollision()) {
+                            const calendar = calendars[currentActiveMonth];
+                            // Add to calendar's individual scrubbing distance
+                            calendar.scrubbingDistance += movementDistance;
+                            
+                            // Start cleaning if not already started
+                            if (!isCleaningInProgress) {
+                                isCleaningInProgress = true;
+                            }
+                        } else {
+                            // Stop cleaning if moved off calendar, but DON'T reset progress
+                            if (isCleaningInProgress) {
+                                isCleaningInProgress = false;
+                            }
+                        }
+                    }
+                }
+                
+                lastSpongeX = newX;
+                lastSpongeY = newY;
+                sponge.x = newX;
+                sponge.y = newY;
+                
+                draw();
+            } else {
+                // Change cursor if hovering over sponge
+                if (isSpongeClicked(pos.x, pos.y)) {
+                    canvas.style.cursor = 'grab';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            sponge.isDragging = false;
+            canvas.style.cursor = 'default';
+            
+            // Reset scrubbing tracking
+            lastSpongeX = 0;
+            lastSpongeY = 0;
+            
+            // Stop cleaning flag but DON'T reset progress
+            if (isCleaningInProgress) {
+                isCleaningInProgress = false;
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            if (sponge.isDragging) {
+                sponge.isDragging = false;
+                canvas.style.cursor = 'default';
+                
+                // Stop cleaning flag but DON'T reset progress
+                if (isCleaningInProgress) {
+                    isCleaningInProgress = false;
+                }
+            }
+        });
+        
+        // Touch event handlers for mobile
+        function getTouchPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0] || e.changedTouches[0];
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top + window.scrollY
+            };
+        }
+        
+canvas.addEventListener('touchstart', (e) => {
+    const pos = getTouchPos(e);
+    dismissTutorial();
+
+    if (isSpongeClicked(pos.x, pos.y)) {
+        e.preventDefault();
+        sponge.isDragging = true;
+        sponge.offsetX = pos.x - sponge.x;
+        sponge.offsetY = pos.y - sponge.y;
+
+        lastSpongeX = sponge.x;
+        lastSpongeY = sponge.y;
+
+        if (tutorialTimeout) clearTimeout(tutorialTimeout);
+    }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!sponge.isDragging) return;
+
+    e.preventDefault(); 
+    const pos = getTouchPos(e);
+
+    const newX = pos.x - sponge.offsetX;
+    const newY = pos.y - sponge.offsetY;
+
+    if (lastSpongeX !== 0 && lastSpongeY !== 0) {
+        const dx = newX - lastSpongeX;
+        const dy = newY - lastSpongeY;
+        const movementDistance = Math.sqrt(dx*dx + dy*dy);
+
+        if (movementDistance >= SCRUBBING_THRESHOLD) {
+            if (checkSpongeCalendarCollision()) {
+                const cal = calendars[currentActiveMonth];
+                cal.scrubbingDistance += movementDistance;
+
+                if (!isCleaningInProgress) isCleaningInProgress = true;
+            } else {
+                if (isCleaningInProgress) isCleaningInProgress = false;
+            }
+        }
+    }
+
+    lastSpongeX = newX;
+    lastSpongeY = newY;
+    sponge.x = newX;
+    sponge.y = newY;
+
+    draw();
+});
+
+canvas.addEventListener('touchend', () => {
+    if (sponge.isDragging) {
+        sponge.isDragging = false;
+        if (isCleaningInProgress) isCleaningInProgress = false;
+        lastSpongeX = 0;
+        lastSpongeY = 0;
+    }
+});
+
+// New: handle OS/browser interruptions
+canvas.addEventListener('touchcancel', () => {
+    if (sponge.isDragging) {
+        sponge.isDragging = false;
+        if (isCleaningInProgress) isCleaningInProgress = false;
+        lastSpongeX = 0;
+        lastSpongeY = 0;
+    }
+});
+
+        // New: handle OS/browser interruptions
+        canvas.addEventListener('touchcancel', () => {
+            if (sponge.isDragging) {
+                sponge.isDragging = false;
+                if (isCleaningInProgress) isCleaningInProgress = false;
+                lastSpongeX = 0;
+                lastSpongeY = 0;
+            }
+        });
+
+        window.addEventListener('scroll', updateScrollIndicator);
+        window.addEventListener('resize', () => { if (!animationComplete) { resetCanvasToViewport(); gridCols = calcGridCols(); gridRows = calcGridRows(); } });
+
+        document.getElementById('tax-popup-button').addEventListener('click', handleTaxPopupButton);
+        document.getElementById('restart-btn').addEventListener('click', reset);
+
+        // Start animation loop (will be paused in manual mode until cascade button is pressed)
+        animationPaused = manualMode;
+        
+        // Start tutorial timer
+        startTutorialTimer();
+        
+        draw(); // Draw initial state
+        animate();
+    </script>
+</body>
+</html>
