@@ -165,9 +165,48 @@
             background: #ae0c00;
         }
 
-
+        .tutorial-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(16px, 4vw, 48px);
+            z-index: 150;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .tutorial-overlay.visible {
+            opacity: 1;
+        }
+        .tutorial-overlay .tutorial-card {
+            width: min(520px, 100%);
+            background: rgba(0, 0, 0, 0.82);
+            border: 2px solid #4CAF50;
+            border-radius: 18px;
+            padding: clamp(12px, 2.5vw, 18px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+            color: #ffffff;
+            text-align: center;
+            transform: translateY(10px) scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .tutorial-overlay.visible .tutorial-card {
+            transform: translateY(0) scale(1);
+        }
+        .tutorial-overlay .tutorial-icon {
+            font-size: clamp(32px, 6vw, 48px);
+            margin-bottom: 12px;
+        }
+        .tutorial-overlay .tutorial-text p {
+            margin: 0;
+            font-size: clamp(16px, 4vw, 20px);
+            line-height: 1.4;
+        }
 
     </style>
+
 </head>
 <body>
     <div id="canvas-container"><canvas id="canvas"></canvas></div>
@@ -180,6 +219,13 @@
 
     <div id="scroll-indicator" class="hidden">Nach oben scrollen um deinen ganzen Reichtum zu entdecken</div>
     
+    <div id="tutorial-overlay" class="tutorial-overlay" aria-hidden="true" aria-live="polite">
+        <div class="tutorial-card">
+            <div class="tutorial-icon" id="tutorial-icon">🧽</div>
+            <div class="tutorial-text" id="tutorial-text"></div>
+        </div>
+    </div>
+    
     <div id="tax-overlay"></div>
     <div id="tax-popup">
         <h2 id="tax-popup-title">🏛️ Steueramt</h2>
@@ -187,13 +233,15 @@
         <button id="tax-popup-button"></button>
     </div>
     
-    
     <button id="restart-btn" style="display: none; position: fixed; bottom: 20px; left: 20px; z-index: 300; background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Hauptmenü</button>
 
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d', { alpha: false });
         const scrollIndicator = document.getElementById('scroll-indicator');
+        const tutorialOverlay = document.getElementById('tutorial-overlay');
+        const tutorialText = document.getElementById('tutorial-text');
+        const tutorialIcon = document.getElementById('tutorial-icon');
 
         function resetCanvasToViewport() { 
             canvas.width = Math.min(800, window.innerWidth); 
@@ -229,9 +277,39 @@
         let showTutorial = false;
         let tutorialStartTime = performance.now();
         let tutorialTimeout = null;
-        let tutorialAnimationProgress = 0;
-        const TUTORIAL_DELAY = 50; // 5 seconds
+        const TUTORIAL_DELAY = 50; // 50 milliseconds
         let tutorialPhase = 1; // 1 = first tutorial, 2 = second tutorial
+
+        function getTutorialText() {
+            if (tutorialPhase === 2) {
+                return "Die Krankenkassenprämien sind um 20% gestiegen. Schaffst du es noch durch das 2. Jahr?";
+            }
+            return "Schrubbe mit dem Schwamm über die schmutzigen Kalender, um sie zu reinigen!";
+        }
+
+        function getTutorialIcon() {
+            return tutorialPhase === 2 ? '📈' : '🧽';
+        }
+
+        function updateTutorialOverlayText() {
+            if (!tutorialText) return;
+            tutorialText.innerHTML = `<p>${getTutorialText()}</p>`;
+        }
+
+        function updateTutorialOverlayIcon() {
+            if (!tutorialIcon) return;
+            tutorialIcon.textContent = getTutorialIcon();
+        }
+
+        function syncTutorialOverlay() {
+            if (!tutorialOverlay) return;
+            updateTutorialOverlayText();
+            updateTutorialOverlayIcon();
+            tutorialOverlay.classList.toggle('visible', showTutorial);
+            tutorialOverlay.setAttribute('aria-hidden', String(!showTutorial));
+        }
+
+        syncTutorialOverlay();
         
         // Tax popup state
         let taxPopupStep = 0; // 0 = not shown, 1 = first message, 2 = second message
@@ -1342,82 +1420,6 @@
 
             
             
-            // --- TUTORIAL BOX RENDERING (NO ROUNDED CORNERS) -----------------------------
-            if (showTutorial) {
-
-                // Select text lines depending on tutorial phase
-                let tutorialLines = (tutorialPhase === 1)
-                    ? [
-                        "Schrubbe mit dem Schwamm über die schmutzigen",
-                        "Kalender, um sie zu reinigen!"
-                    ]
-                    : [
-                        "Die Krankenkassenprämien sind um 20% gestiegen.",
-                        "Schaffst du es noch durch das 2. Jahr?"
-                    ];
-
-                // Fade / scale animation
-                const tutorialElapsed = performance.now() - tutorialStartTime;
-                const fadeInDuration = 500;
-                const animProgress = Math.min(tutorialElapsed / fadeInDuration, 1);
-                const easeProgress = 1 - Math.pow(1 - animProgress, 3);
-
-                ctx.save();
-                ctx.font = "bold 18px Arial, sans-serif";
-
-                // Measure longest line
-                let maxWidth = 0;
-                tutorialLines.forEach(line => {
-                    const w = ctx.measureText(line).width;
-                    if (w > maxWidth) maxWidth = w;
-                });
-
-                // Padding + auto-size box
-                const paddingX = 25;
-                const paddingY = 20;
-                const lineHeight = 24;
-
-                const tutorialBoxWidth = maxWidth + paddingX * 2;
-                const tutorialBoxHeight = tutorialLines.length * lineHeight + paddingY * 2;
-
-                // Center on screen
-                const tutorialBoxX = (canvas.width - tutorialBoxWidth) / 2;
-                const tutorialBoxY = (canvas.height - tutorialBoxHeight) / 2;
-
-                // Scale pop-in animation (0.8 → 1.0)
-                const scale = 0.8 + easeProgress * 0.2;
-                const scaledWidth = tutorialBoxWidth * scale;
-                const scaledHeight = tutorialBoxHeight * scale;
-                const scaledX = tutorialBoxX + (tutorialBoxWidth - scaledWidth) / 2;
-                const scaledY = tutorialBoxY + (tutorialBoxHeight - scaledHeight) / 2;
-
-                ctx.globalAlpha = easeProgress;
-
-                // BACKGROUND rectangle
-                ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-                ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
-
-                // BORDER rectangle
-                ctx.strokeStyle = "#4CAF50";
-                ctx.lineWidth = 3;
-                ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
-
-                // Draw centered text
-                ctx.fillStyle = "#ffffff";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-
-                const centerX = scaledX + scaledWidth / 2;
-                let currentY = scaledY + scaledHeight / 2 - (tutorialLines.length - 1) * lineHeight / 2;
-
-                tutorialLines.forEach(line => {
-                    ctx.fillText(line, centerX, currentY);
-                    currentY += lineHeight;
-                });
-
-                ctx.restore();
-            }
-
 
         }
 
@@ -1638,6 +1640,7 @@
                 tutorialShown = false;   // allow it to show again
                 showTutorial = true;     // show immediately
                 tutorialStartTime = performance.now();
+                syncTutorialOverlay();
             }
             
             // Redraw to show new state
@@ -1697,6 +1700,7 @@
             tutorialStartTime = performance.now();
             if (tutorialTimeout) clearTimeout(tutorialTimeout);
             startTutorialTimer();
+            syncTutorialOverlay();
             
             // Reset tax popup
             taxPopupStep = 0;
@@ -1721,6 +1725,7 @@
                 if (!tutorialShown && currentActiveMonth === 0 && !calendars[0]?.isClean) {
                     showTutorial = true;
                     tutorialStartTime = performance.now();
+                    syncTutorialOverlay();
                 }
             }, TUTORIAL_DELAY);
         }
@@ -1731,6 +1736,7 @@
                 showTutorial = false;
                 tutorialShown = true;
                 if (tutorialTimeout) clearTimeout(tutorialTimeout);
+                syncTutorialOverlay();
             }
         }
 
