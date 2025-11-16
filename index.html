@@ -219,7 +219,7 @@
         let lastSpongeY = 0;
         let scrubbingDistance = 0;
         const SCRUBBING_THRESHOLD = 1; // Minimum pixels to move to count as scrubbing
-        const DISTANCE_PER_PROGRESS = 800; // Total distance needed to clean a calendar (increased from 200)
+        const DISTANCE_PER_PROGRESS = 600; // Total distance needed to clean a calendar (increased from 200)
         
         // Tutorial state
         let tutorialShown = false;
@@ -227,7 +227,7 @@
         let tutorialStartTime = performance.now();
         let tutorialTimeout = null;
         let tutorialAnimationProgress = 0;
-        const TUTORIAL_DELAY = 5000; // 5 seconds
+        const TUTORIAL_DELAY = 50; // 5 seconds
         
         // Tax popup state
         let taxPopupStep = 0; // 0 = not shown, 1 = first message, 2 = second message
@@ -803,7 +803,7 @@
         }
 
         function drawCalendars(startY, endY) {
-            const monthNames = ['Januar', 'Februar', 'MÃ¤rz', 'April', 'Mai', 'Juni', 
+            const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
                                 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
             
             const availableHeight = endY - startY;
@@ -1432,7 +1432,7 @@
             taxPopupStep = 100; // Special code for heritage event
             
             title.textContent = '💰 Erbs-schaft';
-            text.textContent = 'Anruf von der Familie: Sie erhalten eine Erbs-schaft von 50 Millionen CHF (50\'000 Erbsen)';
+            text.innerHTML = 'Anruf von der Familie: Sie erhalten eine <b>Erbs-schaft von 50 Millionen CHF</b> (50\'000 Erbsen)';
             button.textContent = 'OK';
             
             overlay.classList.add('visible');
@@ -1500,7 +1500,7 @@
             } else if (taxPopupStep === 1) {
                 // Show second message
                 taxPopupStep = 2;
-                text.textContent = 'Gerne verrechnen wir ihnen 5 Erbsen Einkommenssteuer. Sie werden direkt von ihrem Konto abgebucht. Vielen Dank für ihren wertvollen Beitrag zu unserer Gesellschaft!';
+                text.innerHTML = 'Gerne verrechnen wir ihnen <b>5 Erbsen Einkommenssteuer.</b> Sie werden direkt von ihrem Konto abgebucht. Vielen Dank für ihren wertvollen Beitrag zu unserer Gesellschaft!';
                 button.textContent = 'OK';
             } else if (taxPopupStep === 2) {
                 // Close popup and apply tax
