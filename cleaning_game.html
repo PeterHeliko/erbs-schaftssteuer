@@ -242,12 +242,20 @@
         const tutorialOverlay = document.getElementById('tutorial-overlay');
         const tutorialText = document.getElementById('tutorial-text');
         const tutorialIcon = document.getElementById('tutorial-icon');
+        const SCRUB_DISTANCE_FACTOR = 0.8; // Portion of viewport needed to clean a calendar
+        let distancePerProgress = 600;
 
         function resetCanvasToViewport() { 
             canvas.width = Math.min(800, window.innerWidth); 
             canvas.height = window.innerHeight; 
         }
         resetCanvasToViewport();
+
+        function recalcDistancePerProgress() {
+            const referenceSize = Math.min(window.innerWidth, window.innerHeight);
+            distancePerProgress = Math.max(250, referenceSize * SCRUB_DISTANCE_FACTOR);
+        }
+        recalcDistancePerProgress();
 
         let animationComplete = false;
         let animationPaused = false;
@@ -270,7 +278,6 @@
         let lastSpongeY = 0;
         let scrubbingDistance = 0;
         const SCRUBBING_THRESHOLD = 1; // Minimum pixels to move to count as scrubbing
-        const DISTANCE_PER_PROGRESS = 600; // Total distance needed to clean a calendar (increased from 200)
         
         // Tutorial state
         let tutorialShown = false;
@@ -327,6 +334,7 @@
         const FALL_SPEED = 67.5;
 
         const GRID_CELL_SIZE = PEA_SIZE;
+
         function calcGridCols() { return Math.max(1, Math.floor(canvas.width / GRID_CELL_SIZE)); }
         function calcGridRows() { return Math.max(1, Math.floor(canvas.height / GRID_CELL_SIZE)); }
         let gridCols = calcGridCols();
@@ -832,7 +840,7 @@
             if (isCleaningInProgress && currentActiveMonth < 12) {
                 // Update the active calendar's progress based on its scrubbing distance
                 const calendar = calendars[currentActiveMonth];
-                calendar.progress = Math.min(calendar.scrubbingDistance / DISTANCE_PER_PROGRESS, 1);
+                calendar.progress = Math.min(calendar.scrubbingDistance / distancePerProgress, 1);
                 
                 if (calendar.progress >= 1) {
                     // Cleaning complete!
@@ -1674,9 +1682,10 @@
             resetCanvasToViewport(); 
             gridCols = calcGridCols(); 
             gridRows = calcGridRows();
+            recalcDistancePerProgress();
             
-
             // Reset year
+
             currentYear = 1;
 
             // Reset calendar and sponge state
@@ -1969,7 +1978,14 @@ canvas.addEventListener('touchcancel', () => {
         });
 
         window.addEventListener('scroll', updateScrollIndicator);
-        window.addEventListener('resize', () => { if (!animationComplete) { resetCanvasToViewport(); gridCols = calcGridCols(); gridRows = calcGridRows(); } });
+        window.addEventListener('resize', () => { 
+            if (!animationComplete) { 
+                resetCanvasToViewport(); 
+                gridCols = calcGridCols(); 
+                gridRows = calcGridRows(); 
+            }
+            recalcDistancePerProgress();
+        });
 
         document.getElementById('tax-popup-button').addEventListener('click', handleTaxPopupButton);
         document.getElementById('restart-btn').addEventListener('click', () => {
