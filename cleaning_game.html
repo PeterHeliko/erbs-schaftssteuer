@@ -245,6 +245,34 @@
         const SCRUB_DISTANCE_FACTOR = 0.8; // Portion of viewport needed to clean a calendar
         let distancePerProgress = 600;
 
+        // Create a blurred dirt texture (offscreen)
+        const dirtTextureSize = 64; // you can adjust
+        const dirtTex = document.createElement('canvas');
+        dirtTex.width = dirtTextureSize;
+        dirtTex.height = dirtTextureSize;
+
+        const dctx = dirtTex.getContext('2d');
+
+        // very soft blur
+        dctx.clearRect(0, 0, dirtTextureSize, dirtTextureSize);
+        dctx.globalAlpha = 0.35;
+        dctx.filter = 'blur(8px)';
+
+        dctx.fillStyle = 'rgb(101, 67, 33)'; // your dirt brown
+        dctx.beginPath();
+        dctx.arc(
+            dirtTextureSize / 2,
+            dirtTextureSize / 2,
+            dirtTextureSize * 0.35,
+            0,
+            Math.PI * 2
+        );
+        dctx.fill();
+
+        // reset filter so the main canvas isn’t blurred
+        dctx.filter = 'none';
+
+
         function resetCanvasToViewport() { 
             canvas.width = Math.min(800, window.innerWidth); 
             canvas.height = window.innerHeight; 
@@ -962,6 +990,7 @@
                     scrubbingDistance: 0, // Individual scrubbing distance for this calendar
                     shineActive: false,
                     shineProgress: 0,
+                    dirtSpots: [],
                 };
             } else {
                 calendars[monthIndex].x = x;
@@ -970,6 +999,31 @@
             }
             
             const calendar = calendars[monthIndex];
+
+            // Generate dirt spots once
+            if (!calendar.dirtCircles) {
+                calendar.dirtCircles = [];
+
+                const circleCount = 80;
+                const minR = size * 0.02;
+                const maxR = size * 0.16;
+
+                for (let i = 0; i < circleCount; i++) {
+
+                    const r = minR + Math.random() * (maxR - minR);
+
+                    const cx = x + r + Math.random() * (size - 2 * r);
+                    const cy = y + r + Math.random() * (size - 2 * r);
+
+                    const opacity = 0.2 + Math.random() * 0.6; 
+                    // → random between 0.2 and 0.8 (nice dirt range)
+
+                    calendar.dirtCircles.push({ x: cx, y: cy, r, opacity });
+                }
+            }
+
+
+
             
             // Days in each month (non-leap year)
             const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -979,33 +1033,39 @@
             if (calendar.isClean) {
                 // Completed: dark grey background
                 ctx.fillStyle = '#4a4a4a';
-            } else {
+            } else if(monthIndex > currentActiveMonth && !calendar.isClean) {
+                ctx.fillStyle = '#7E5600';
+            }
+                        
+            else {
                 // Not completed: white/light background
                 ctx.fillStyle = '#f5f5f5';
             }
             ctx.fillRect(x, y, size, size);
             
-            // Darken if not the current active month and not yet clean
-            if (monthIndex > currentActiveMonth && !calendar.isClean) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(x, y, size, size);
-            }
+
             
             // Calendar header
             const headerHeight = size * 0.25;
             if (calendar.isClean) {
                 // Completed: even darker grey header for better contrast
                 ctx.fillStyle = '#1a1a1a';
-            } else {
+            } else  if (monthIndex > currentActiveMonth && !calendar.isClean){
                 // Not completed: red header
+                ctx.fillStyle = '#120C00';
+            } else {
                 ctx.fillStyle = '#d32f2f';
             }
+
             ctx.fillRect(x, y, size, headerHeight);
             
             // Month name on header
             if (calendar.isClean) {
                 // Completed: darker grey text
                 ctx.fillStyle = '#757575';
+            } else  if (monthIndex > currentActiveMonth && !calendar.isClean){
+                // Not completed: red header
+                ctx.fillStyle = '#543A00';
             } else {
                 ctx.fillStyle = '#ffffff';
             }
@@ -1064,7 +1124,9 @@
                     }
                 }
             }
-            
+
+
+    
             // Draw dirt overlay if dirty (with progressive opacity reduction during cleaning)
             if (calendar.isDirty && !calendar.isClean) {
                 // Calculate dirt opacity based on cleaning progress (use calendar's stored progress)
@@ -1073,21 +1135,38 @@
                     dirtOpacity = 1.0 - calendar.progress; // Use individual calendar progress
                 }
                 
-                ctx.fillStyle = `rgba(139, 90, 43, ${0.4 * dirtOpacity})`; // Brown semi-transparent dirt
+                ctx.fillStyle = `rgba(139, 90, 43, ${0.8 * dirtOpacity})`; // Brown semi-transparent dirt
                 ctx.fillRect(x, y, size, size);
                 
                 // Add some dirt spots with reduced opacity
-                ctx.fillStyle = `rgba(101, 67, 33, ${0.3 * dirtOpacity})`;
-                for (let i = 0; i < 8; i++) {
-                    const spotX = x + (Math.sin(i * 2.3) * 0.5 + 0.5) * size;
-                    const spotY = y + (Math.cos(i * 1.7) * 0.5 + 0.5) * size;
-                    const spotRadius = size * 0.08 * (0.5 + Math.sin(i) * 0.5);
-                    ctx.beginPath();
-                    ctx.arc(spotX, spotY, spotRadius, 0, Math.PI * 2);
-                    ctx.fill();
+                for (const c of calendar.dirtCircles) {
+                    const baseOpacity = c.opacity * dirtOpacity;
+
+                    ctx.globalAlpha = baseOpacity;
+
+                    const size = c.r * 2; // texture is drawn square
+                    ctx.drawImage(
+                        dirtTex,
+                        c.x - c.r,
+                        c.y - c.r,
+                        size,
+                        size
+                    );
                 }
+
+            ctx.globalAlpha = 1; // reset
+
             }
-            
+
+
+
+
+
+            // Darken if not the current active month and not yet clean
+            if (monthIndex > currentActiveMonth && !calendar.isClean) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(x, y, size, size);
+            }
             // Draw green checkmark if completed (centered in lower part)
             if (calendar.isClean) {
                 ctx.strokeStyle = '#4CAF50';
@@ -1134,6 +1213,8 @@
 
             drawCalendarShine(calendar);
         }
+
+
 
         function drawCalendarShine(calendar) {
             if (!calendar.shineActive) return;
