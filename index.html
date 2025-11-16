@@ -228,6 +228,7 @@
         let tutorialTimeout = null;
         let tutorialAnimationProgress = 0;
         const TUTORIAL_DELAY = 50; // 5 seconds
+        let tutorialPhase = 1; // 1 = first tutorial, 2 = second tutorial
         
         // Tax popup state
         let taxPopupStep = 0; // 0 = not shown, 1 = first message, 2 = second message
@@ -1322,62 +1323,83 @@
 
             
             
-            // Draw tutorial text if showing
+            // --- TUTORIAL BOX RENDERING (NO ROUNDED CORNERS) -----------------------------
             if (showTutorial) {
-                // Calculate animation progress (fade in over 0.5 seconds)
+
+                // Select text lines depending on tutorial phase
+                let tutorialLines = (tutorialPhase === 1)
+                    ? [
+                        "Schrubbe mit dem Schwamm über die schmutzigen",
+                        "Kalender, um sie zu reinigen!"
+                    ]
+                    : [
+                        "Die Krankenkassenprämien sind um 20% gestiegen.",
+                        "Schaffst du es noch durch das 2. Jahr?"
+                    ];
+
+                // Fade / scale animation
                 const tutorialElapsed = performance.now() - tutorialStartTime;
-                const fadeInDuration = 500; // 0.5 seconds
+                const fadeInDuration = 500;
                 const animProgress = Math.min(tutorialElapsed / fadeInDuration, 1);
-                const easeProgress = 1 - Math.pow(1 - animProgress, 3); // Ease out cubic
-                
-                // Position tutorial box to avoid overlapping with sponge
-                const tutorialBoxWidth = Math.min(380, canvas.width - 40);
-                const tutorialBoxHeight = 70;
-                
-                // Place it at top if sponge is in upper half, otherwise at bottom
-                let tutorialBoxY;
-                if (sponge.y < canvas.height / 2) {
-                    // Sponge is at top, put tutorial at bottom
-                    tutorialBoxY = canvas.height - tutorialBoxHeight - 150;
-                } else {
-                    // Sponge is at bottom, put tutorial at top
-                    tutorialBoxY = 150;
-                }
-                
-                const tutorialBoxX = (canvas.width - tutorialBoxWidth) / 2;
-                
-                // Apply animation transforms
+                const easeProgress = 1 - Math.pow(1 - animProgress, 3);
+
                 ctx.save();
-                ctx.globalAlpha = easeProgress;
-                
-                // Scale from 0.8 to 1.0
-                const scale = 0.72 + (easeProgress * 0.2);
+                ctx.font = "bold 18px Arial, sans-serif";
+
+                // Measure longest line
+                let maxWidth = 0;
+                tutorialLines.forEach(line => {
+                    const w = ctx.measureText(line).width;
+                    if (w > maxWidth) maxWidth = w;
+                });
+
+                // Padding + auto-size box
+                const paddingX = 25;
+                const paddingY = 20;
+                const lineHeight = 24;
+
+                const tutorialBoxWidth = maxWidth + paddingX * 2;
+                const tutorialBoxHeight = tutorialLines.length * lineHeight + paddingY * 2;
+
+                // Center on screen
+                const tutorialBoxX = (canvas.width - tutorialBoxWidth) / 2;
+                const tutorialBoxY = (canvas.height - tutorialBoxHeight) / 2;
+
+                // Scale pop-in animation (0.8 → 1.0)
+                const scale = 0.8 + easeProgress * 0.2;
                 const scaledWidth = tutorialBoxWidth * scale;
                 const scaledHeight = tutorialBoxHeight * scale;
                 const scaledX = tutorialBoxX + (tutorialBoxWidth - scaledWidth) / 2;
                 const scaledY = tutorialBoxY + (tutorialBoxHeight - scaledHeight) / 2;
-                
-                // Semi-transparent background
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+
+                ctx.globalAlpha = easeProgress;
+
+                // BACKGROUND rectangle
+                ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
                 ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
-                
-                // Border
-                ctx.strokeStyle = '#4CAF50';
+
+                // BORDER rectangle
+                ctx.strokeStyle = "#4CAF50";
                 ctx.lineWidth = 3;
                 ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
-                
-                // Tutorial text (centered vertically in box)
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '16px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+
+                // Draw centered text
+                ctx.fillStyle = "#ffffff";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
                 const centerX = scaledX + scaledWidth / 2;
-                const centerY = scaledY + scaledHeight / 2;
-                ctx.fillText('Ziehe den Schwamm Über die schmutzigen', centerX, centerY - 12);
-                ctx.fillText('Kalender, um sie zu reinigen!', centerX, centerY + 12);
-                
+                let currentY = scaledY + scaledHeight / 2 - (tutorialLines.length - 1) * lineHeight / 2;
+
+                tutorialLines.forEach(line => {
+                    ctx.fillText(line, centerX, currentY);
+                    currentY += lineHeight;
+                });
+
                 ctx.restore();
             }
+
+
         }
 
 
@@ -1582,6 +1604,22 @@
             
             // Increment year
             currentYear++;
+
+            // Trigger second tutorial at start of year 2
+            if (currentYear === 2) {
+                // Restore sponge to starting position (January calendar)
+                const january = calendars[0];
+                if (january) {
+                    sponge.x = january.x + january.size / 2;
+                    sponge.y = january.y + january.size / 2;
+                }
+
+                // Switch to tutorial phase 2  
+                tutorialPhase = 2;
+                tutorialShown = false;   // allow it to show again
+                showTutorial = true;     // show immediately
+                tutorialStartTime = performance.now();
+            }
             
             // Redraw to show new state
             draw();
