@@ -924,6 +924,7 @@
                     isCleaningInProgress = false;
                     calendar.shineActive = true;
                     calendar.shineProgress = 0;
+                    calendar.pop = 1.0;
 
                     
                     // Add 4 green peas
@@ -1040,6 +1041,7 @@
                     dirtCircles: null,
                     dirtCanvas: null,
                     dirtCanvasSize: 0,
+                    pop: 0,
                 };
             } else {
                 calendars[monthIndex].x = x;
@@ -1077,6 +1079,27 @@
 
             ctx.save(); // Save state before clipping
 
+            // POP ANIMATION — scale up and down
+            if (calendar.pop > 0) {
+                const p = calendar.pop; 
+
+                // Ease curve (0→1→0)
+                const scale = 1 + Math.sin(p * Math.PI) * 0.02;  
+                // 0.18 = 18% bigger at the peak
+
+                const cx = x + size / 2;
+                const cy = y + size / 2;
+
+                ctx.translate(cx, cy);
+                ctx.scale(scale, scale);
+                ctx.translate(-cx, -cy);
+
+                // decrease pop over time
+                calendar.pop -= 0.02;   // tweak for slower/faster pop
+                if (calendar.pop < 0) calendar.pop = 0;
+            }
+
+
             roundedRectPath(ctx, x, y, size, size, size * 0.05);  
             ctx.clip(); // Clip everything visually to rounded corners
 
@@ -1085,7 +1108,11 @@
             // Calendar background
             if (calendar.isClean) {
                 // Completed: dark grey background
-                ctx.fillStyle = '#4a4a4a';
+                const g = ctx.createLinearGradient(x, y, x, y + size);
+                g.addColorStop(0, "#6a6a6a");
+                g.addColorStop(1, "#3c3c3c");
+                ctx.fillStyle = g;
+                ctx.fillRect(x, y, size, size);
             } else if(monthIndex > currentActiveMonth && !calendar.isClean) {
                 ctx.fillStyle = '#7E5600';
             }
@@ -1218,6 +1245,8 @@
                 ctx.stroke();
             }
             
+
+
             // Draw progress bar if currently being cleaned OR has partial progress
             if (monthIndex === currentActiveMonth && calendar.progress > 0 && !calendar.isClean) {
                 const barHeight = size * 0.06;
@@ -1238,6 +1267,19 @@
                 ctx.lineWidth = 2;
                 ctx.strokeRect(barX, barY, barWidth, barHeight);
             }
+
+            // Rounded green outline for completed calendar
+            if (calendar.isClean) {
+                ctx.strokeStyle = '#4CAF50';
+                ctx.lineWidth = Math.max(4, size * 0.03);
+
+                // Recreate the same rounded path used for clipping
+                roundedRectPath(ctx, x, y, size, size, size * 0.05);
+                ctx.stroke();
+            }
+
+            
+
 
             drawCalendarShine(calendar);
             ctx.restore();
