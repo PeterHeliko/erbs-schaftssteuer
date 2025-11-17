@@ -773,7 +773,6 @@
         // Heritage event state
         let heritageEventTriggered = false;
         let heritageEventProbability = 0; // Increases each month starting from year 2
-        const HERITAGE_BASE_PROBABILITY = 0.05; // 8% per month, ~guaranteed by month 12
         let postCascadeTaxDelay = 1000; // Delay after cascade completes before showing tax popup (in ms)
 
         const PEA_SIZE = 12;
@@ -1315,8 +1314,8 @@
                     
                     // Check for heritage event first (only from year 2 onwards, and only once)
                     if (currentYear >= 2 && !heritageEventTriggered && currentActiveMonth <= 12) {
-                        // Calculate probability based on current month
-                        heritageEventProbability = currentActiveMonth * HERITAGE_BASE_PROBABILITY;
+                        // Calculate probability based on exponential growth per month
+                        heritageEventProbability = Math.min(1, Math.pow(HERITAGE_PROBABILITY_BASE, currentActiveMonth) / 100);
                         
                         // Roll for heritage event
                         if (Math.random() < heritageEventProbability) {
