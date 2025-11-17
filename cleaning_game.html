@@ -164,8 +164,51 @@
         #tax-popup button.no-button:hover {
             background: #ae0c00;
         }
-
+ 
+        #achievement-alert {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            background: rgba(15, 15, 15, 0.92);
+            color: #fff;
+            padding: 16px 20px;
+            border-radius: 14px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transform: translateY(140%);
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            z-index: 205;
+            pointer-events: none;
+            font-family: 'Arial', sans-serif;
+        }
+        #achievement-alert.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        #achievement-alert .achievement-icon {
+            font-size: 32px;
+        }
+        #achievement-alert .achievement-content {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        #achievement-alert .achievement-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: #FFD54F;
+        }
+        #achievement-alert .achievement-text {
+            font-size: 14px;
+            color: #f0f0f0;
+        }
+ 
         #gameover-overlay {
+
             display: none;
             position: fixed;
             inset: 0;
@@ -291,6 +334,14 @@
             <div class="tutorial-text" id="tutorial-text"></div>
         </div>
     </div>
+
+    <div id="achievement-alert" aria-live="polite">
+        <div class="achievement-icon">🏆</div>
+        <div class="achievement-content">
+            <div class="achievement-title">Spongebob Schwammkopf</div>
+            <div class="achievement-text">Du schrubbst schneller als dein Schatten</div>
+        </div>
+    </div>
     
     <div id="tax-overlay"></div>
     <div id="tax-popup">
@@ -327,6 +378,7 @@
         const gameOverOverlay = document.getElementById('gameover-overlay');
         const gameOverPopup = document.getElementById('gameover-popup');
         const gameOverOptions = document.querySelectorAll('.gameover-option');
+        const achievementAlert = document.getElementById('achievement-alert');
         const SCRUB_DISTANCE_FACTOR = 0.8; // Portion of viewport needed to clean a calendar
         const TOP_BAR_HEIGHT = 42;
         let distancePerProgress = 600;
@@ -2106,6 +2158,16 @@
         }
 
         
+        function showAchievementAlert() {
+            if (!achievementAlert) return;
+            achievementAlert.classList.add('visible');
+        }
+
+        function hideAchievementAlert() {
+            if (!achievementAlert) return;
+            achievementAlert.classList.remove('visible');
+        }
+
         function showTaxPopup() {
             const overlay = document.getElementById('tax-overlay');
             const popup = document.getElementById('tax-popup');
@@ -2136,6 +2198,12 @@
             title.textContent = '💰 Erbs-schaft';
             text.innerHTML = 'Anruf von der Familie: Sie erhalten eine <b>Erbs-schaft von 50 Millionen CHF</b> (50\'000 Erbsen)';
             button.textContent = 'OK';
+            
+            if (!monsterCatchOccurred) {
+                showAchievementAlert();
+            } else {
+                hideAchievementAlert();
+            }
             
             overlay.classList.add('visible');
             popup.classList.add('visible');
@@ -2244,6 +2312,7 @@
             showTutorial = false;
             tutorialShown = true;
             syncTutorialOverlay();
+            hideAchievementAlert();
             ensureMonsterPresence();
             if (yearCompleted && taxPopupStep === 0) {
                 setTimeout(() => {
@@ -2266,6 +2335,7 @@
                 // Heritage event - start cascade
                 overlay.classList.remove('visible');
                 popup.classList.remove('visible');
+                hideAchievementAlert();
                 taxPopupStep = 0;
                 heritageEventTriggered = true;
                 currentMoney += 50000000
@@ -2471,6 +2541,7 @@
             taxPopupStep = 0;
             document.getElementById('tax-overlay').classList.remove('visible');
             document.getElementById('tax-popup').classList.remove('visible');
+            hideAchievementAlert();
             
             // Reset heritage event state
             heritageEventTriggered = false;
