@@ -535,6 +535,7 @@
             const path = createMonsterPath(calendar, monthIndex);
             const monthsElapsed = monthsSinceMonsterIntro(monthIndex);
             const speed = MONSTER_BASE_SPEED + monthsElapsed * MONSTER_SPEED_INCREMENT;
+            const requiresScrubStart = monsterDelayedAfterCatch || monthIndex === 0;
 
             const size = Math.max(30, calendar.size * MONSTER_SIZE_RATIO);
             monster = {
@@ -545,14 +546,17 @@
                 size,
                 wobblePhase: Math.random() * Math.PI * 2,
                 wobbleAmplitude: Math.max(12, calendar.size * 0.06),
-                waitForScrub: monthIndex === 0,
-                startedMoving: monthIndex !== 0,
+                waitForScrub: requiresScrubStart,
+                startedMoving: !requiresScrubStart,
                 idleTime: 0,
                 vanishing: false,
                 vanishProgress: 0
             };
             monster.x = path.start.x;
             monster.y = path.start.y;
+            if (monsterDelayedAfterCatch) {
+                monsterDelayedAfterCatch = false;
+            }
         }
 
         function ensureMonsterPresence() {
@@ -759,6 +763,7 @@
         let gameOver = false;
         let forcedHeritagePlan = null;
         let monsterCatchOccurred = false;
+        let monsterDelayedAfterCatch = false;
  
          
         // Scrubbing motion detection
@@ -2220,7 +2225,7 @@
         }
 
         function maybeTriggerGuaranteedHeritage(monthIndex, year) {
-            if (heritageEventTriggered || monsterCatchOccurred) return false;
+            if (heritageEventTriggered) return false;
             if (year === 2 && monthIndex === 11) {
                 return triggerHeritageEvent('december-guarantee');
             }
@@ -2232,7 +2237,14 @@
             const yearCompleted = currentActiveMonth >= 12;
             const upcomingMonth = getUpcomingMonthReference();
             gameOver = false;
+            monsterDelayedAfterCatch = true;
             scheduleForcedHeritagePlan(upcomingMonth.monthIndex, upcomingMonth.year);
+            isCleaningInProgress = false;
+            sponge.isDragging = false;
+            showTutorial = false;
+            tutorialShown = true;
+            syncTutorialOverlay();
+            ensureMonsterPresence();
             if (yearCompleted && taxPopupStep === 0) {
                 setTimeout(() => {
                     if (taxPopupStep === 0) {
@@ -2368,6 +2380,7 @@
             monster = null;
             monsterGhosts = [];
             monsterSuppressed = false;
+            monsterDelayedAfterCatch = false;
             
             // Increment year
             currentYear++;
@@ -2463,6 +2476,7 @@
             heritageEventTriggered = false;
             forcedHeritagePlan = null;
             monsterCatchOccurred = false;
+            monsterDelayedAfterCatch = false;
             
             // Hide restart button
             document.getElementById('restart-btn').style.display = 'none';
