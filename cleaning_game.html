@@ -345,7 +345,7 @@
         let isCleaningInProgress = false;
         let cleaningStartTime = 0;
         const CLEANING_DURATION = 1000; // 1 second per month
-        const SHINE_SPEED = 4.2; // Progress per second for the shine sweep
+        const SHINE_SPEED = 3.2; // Progress per second for the shine sweep
         let yearlyPeasEarned = 0; // Track peas earned this year
         
         // Scrubbing motion detection
@@ -1084,7 +1084,7 @@
                 const p = calendar.pop; 
 
                 // Ease curve (0→1→0)
-                const scale = 1 + Math.sin(p * Math.PI) * 0.02;  
+                const scale = 1 + Math.sin(p * Math.PI) * 0.04;  
                 // 0.18 = 18% bigger at the peak
 
                 const cx = x + size / 2;
