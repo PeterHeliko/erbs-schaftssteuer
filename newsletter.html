@@ -148,11 +148,23 @@
                 <input id="contact_email" name="contact[email]" type="email" required>
             </div>
 
+            <div class="flex flex-col">
+                <label for="contact_data_future_interest">
+                <input name="contact[data][future_interest]" type="hidden" value="false"/>
+                <input id="contact_data_future_interest" name="contact[data][future_interest]" style="mr-4" type="checkbox" value="true"/>
+                Ich möchte über zukünftige Projekte informiert werden. (optional)
+                </label>
+            </div>
+
             <input aria-hidden="true" autocomplete="off" name="h[url]" novalidate style="display: none;" />
 
             <button class="submit-btn">Anmelden</button>
         </form>
 
+
+
+
+        
         <a href="index.html"><button class="back-btn">Zurück</button></a>
     </main>
 

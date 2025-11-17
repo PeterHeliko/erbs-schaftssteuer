@@ -165,6 +165,62 @@
             background: #ae0c00;
         }
 
+        #gameover-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 250;
+        }
+        #gameover-overlay.visible {
+            display: block;
+        }
+        #gameover-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1f1f1f;
+            color: #fff;
+            padding: 32px;
+            border-radius: 18px;
+            width: min(420px, 90%);
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            z-index: 251;
+        }
+        #gameover-popup.visible {
+            display: block;
+            animation: popupAppear 0.35s ease-out;
+        }
+        #gameover-popup h2 {
+            margin-top: 0;
+            font-size: 26px;
+            color: #ff6f61;
+        }
+        #gameover-popup p {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 24px;
+            color: #d7d7d7;
+        }
+        #gameover-popup button {
+            background: #ff6f61;
+            border: none;
+            color: #1f1f1f;
+            font-weight: bold;
+            padding: 12px 28px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        #gameover-popup button:hover {
+            background: #ff8a7b;
+            transform: translateY(-1px);
+        }
+
         .tutorial-overlay {
             position: fixed;
             inset: 0;
@@ -232,6 +288,13 @@
         <p id="tax-popup-text"></p>
         <button id="tax-popup-button"></button>
     </div>
+
+    <div id="gameover-overlay"></div>
+    <div id="gameover-popup">
+        <h2>Zahlungsverzug</h2>
+        <p id="gameover-text">Leider konnten wir keinen Zahlungseingang für die Rechnung Nr. 3R8S3 feststellen.</p>
+        <button id="gameover-button">Hauptmenü</button>
+    </div>
     
     <button id="restart-btn" style="display: none; position: fixed; bottom: 20px; left: 20px; z-index: 300; background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Hauptmenü</button>
 
@@ -242,6 +305,10 @@
         const tutorialOverlay = document.getElementById('tutorial-overlay');
         const tutorialText = document.getElementById('tutorial-text');
         const tutorialIcon = document.getElementById('tutorial-icon');
+        const gameOverOverlay = document.getElementById('gameover-overlay');
+        const gameOverPopup = document.getElementById('gameover-popup');
+        const gameOverText = document.getElementById('gameover-text');
+        const gameOverButton = document.getElementById('gameover-button');
         const SCRUB_DISTANCE_FACTOR = 0.8; // Portion of viewport needed to clean a calendar
         let distancePerProgress = 600;
 
@@ -319,7 +386,289 @@
             ctx.closePath();
         }
 
+        function randomBetween(min, max) {
+            return min + Math.random() * (max - min);
+        }
+
+        function getCalendarCenter(calendar) {
+            return {
+                x: calendar.x + calendar.size / 2,
+                y: calendar.y + calendar.size / 2
+            };
+        }
+
+        function getMonsterPairIndex(monthIndex) {
+            if (Object.prototype.hasOwnProperty.call(MONSTER_SPAWN_PAIRS, monthIndex)) {
+                return MONSTER_SPAWN_PAIRS[monthIndex];
+            }
+            return null;
+        }
+
+        function getFallbackSpawnPoint(calendar) {
+            const center = getCalendarCenter(calendar);
+            return {
+                x: center.x,
+                y: Math.max(40, center.y - calendar.size * 1.2)
+            };
+        }
+
+        function getMonsterSpawnPoint(calendar, monthIndex) {
+            const pairIndex = getMonsterPairIndex(monthIndex);
+            if (pairIndex !== null) {
+                const pairCalendar = calendars[pairIndex];
+                if (pairCalendar) {
+                    return getCalendarCenter(pairCalendar);
+                }
+            }
+            return getFallbackSpawnPoint(calendar);
+        }
+
+        function createMonsterPath(calendar, monthIndex) {
+            const center = getCalendarCenter(calendar);
+            const spawnPoint = getMonsterSpawnPoint(calendar, monthIndex);
+            const midX = (spawnPoint.x + center.x) / 2;
+            const midY = (spawnPoint.y + center.y) / 2;
+            const distance = Math.hypot(center.x - spawnPoint.x, center.y - spawnPoint.y);
+            const offsetScale = Math.max(40, distance * 0.25);
+            const angle = Math.atan2(center.y - spawnPoint.y, center.x - spawnPoint.x);
+            const perpendicularAngle = angle + Math.PI / 2;
+            const offset = offsetScale * (0.5 + Math.random() * 0.5);
+            const offsetX = Math.cos(perpendicularAngle) * offset;
+            const offsetY = Math.sin(perpendicularAngle) * offset;
+
+            const c1 = {
+                x: spawnPoint.x + offsetX * 0.4 + randomBetween(-60, 60),
+                y: spawnPoint.y + offsetY * 0.4 + randomBetween(-60, 60)
+            };
+            const c2 = {
+                x: midX + offsetX + randomBetween(-80, 80),
+                y: midY + offsetY + randomBetween(-80, 80)
+            };
+
+            return {
+                start: spawnPoint,
+                c1,
+                c2,
+                end: center
+            };
+        }
+
+        function getBezierPoint(t, path) {
+            const u = 1 - t;
+            const tt = t * t;
+            const uu = u * u;
+            const uuu = uu * u;
+            const ttt = tt * t;
+
+            const p = { x: 0, y: 0 };
+            p.x = uuu * path.start.x;
+            p.y = uuu * path.start.y;
+
+            p.x += 3 * uu * t * path.c1.x;
+            p.y += 3 * uu * t * path.c1.y;
+
+            p.x += 3 * u * tt * path.c2.x;
+            p.y += 3 * u * tt * path.c2.y;
+
+            p.x += ttt * path.end.x;
+            p.y += ttt * path.end.y;
+
+            return p;
+        }
+
+        function getBezierTangent(t, path) {
+            const u = 1 - t;
+            const tt = t * t;
+            const uu = u * u;
+
+            const tangent = { x: 0, y: 0 };
+            tangent.x = 3 * uu * (path.c1.x - path.start.x) +
+                        6 * u * t * (path.c2.x - path.c1.x) +
+                        3 * tt * (path.end.x - path.c2.x);
+            tangent.y = 3 * uu * (path.c1.y - path.start.y) +
+                        6 * u * t * (path.c2.y - path.c1.y) +
+                        3 * tt * (path.end.y - path.c2.y);
+            return tangent;
+        }
+
+        function monthsSinceMonsterIntro(monthIndex) {
+            if (currentYear < MONSTER_START_YEAR) return 0;
+            return Math.max(0, (currentYear - MONSTER_START_YEAR) * 12 + monthIndex);
+        }
+
+        function shouldMonsterBeActive() {
+            return currentYear >= MONSTER_START_YEAR && currentActiveMonth < 12 && !gameOver && !monsterSuppressed;
+        }
+
+        function spawnMonsterForMonth(monthIndex) {
+            if (!shouldMonsterBeActive()) return;
+            const calendar = calendars[monthIndex];
+            if (!calendar || calendar.isClean) return;
+
+            const path = createMonsterPath(calendar, monthIndex);
+            const monthsElapsed = monthsSinceMonsterIntro(monthIndex);
+            const speed = MONSTER_BASE_SPEED + monthsElapsed * MONSTER_SPEED_INCREMENT;
+
+            const size = Math.max(30, calendar.size * MONSTER_SIZE_RATIO);
+            monster = {
+                targetMonth: monthIndex,
+                path,
+                progress: 0,
+                speed,
+                size,
+                wobblePhase: Math.random() * Math.PI * 2,
+                wobbleAmplitude: Math.max(12, calendar.size * 0.06),
+                waitForScrub: monthIndex === 0,
+                startedMoving: monthIndex !== 0,
+                idleTime: 0,
+                vanishing: false,
+                vanishProgress: 0
+            };
+            monster.x = path.start.x;
+            monster.y = path.start.y;
+        }
+
+        function ensureMonsterPresence() {
+            if (!shouldMonsterBeActive()) {
+                return;
+            }
+            if (!calendars[currentActiveMonth]) return;
+            if (monster && monster.targetMonth === currentActiveMonth) return;
+            spawnMonsterForMonth(currentActiveMonth);
+        }
+
+        function startMonsterVanish(reason) {
+            if (!monster) return;
+            const ghost = {
+                ...monster,
+                vanishing: true,
+                vanishReason: reason,
+                vanishProgress: 0
+            };
+            monsterGhosts.push(ghost);
+            monster = null;
+        }
+
+        function suppressMonsterMovement() {
+            monster = null;
+            monsterGhosts = [];
+            monsterSuppressed = true;
+        }
+
+        function updateMonsterGhosts() {
+            if (monsterGhosts.length === 0) return;
+            monsterGhosts = monsterGhosts.filter(ghost => {
+                ghost.vanishProgress += frameDeltaSeconds / MONSTER_VANISH_DURATION;
+                return ghost.vanishProgress < 1;
+            });
+        }
+
+        function updateMonster() {
+            if (!monster) return;
+            const allowExisting = monster.targetMonth < currentActiveMonth;
+            if (!shouldMonsterBeActive() && !allowExisting) {
+                monster = null;
+                return;
+            }
+
+            const calendar = calendars[monster.targetMonth];
+            if (!calendar) return;
+
+            if (calendar.isClean) {
+                startMonsterVanish('defeated');
+                return;
+            }
+
+            if (calendar.isClean) {
+                startMonsterVanish('defeated');
+                return;
+            }
+
+            if (monster.waitForScrub && !monster.startedMoving) {
+                monster.idleTime += frameDeltaSeconds;
+                if (isCleaningInProgress) {
+                    monster.startedMoving = true;
+                    monster.waitForScrub = false;
+                } else {
+                    monster.x = monster.path.start.x + Math.sin(monster.idleTime * 2.5) * 8;
+                    monster.y = monster.path.start.y + Math.cos(monster.idleTime * 2.5) * 4;
+                    return;
+                }
+            }
+
+            monster.progress += monster.speed * frameDeltaSeconds;
+            if (monster.progress >= 1) {
+                const end = monster.path.end;
+                monster.x = end.x;
+                monster.y = end.y;
+                monster.progress = 1;
+                handleMonsterReachedTarget();
+                return;
+            }
+
+            const point = getBezierPoint(monster.progress, monster.path);
+            const tangent = getBezierTangent(monster.progress, monster.path);
+            const magnitude = Math.max(0.001, Math.hypot(tangent.x, tangent.y));
+            const nx = -tangent.y / magnitude;
+            const ny = tangent.x / magnitude;
+            const wobble = Math.sin(monster.progress * Math.PI * 4 + monster.wobblePhase) * monster.wobbleAmplitude;
+
+            monster.x = point.x + nx * wobble;
+            monster.y = point.y + ny * wobble;
+        }
+
+        function handleMonsterReachedTarget() {
+            if (gameOver) return;
+            gameOver = true;
+            isCleaningInProgress = false;
+            sponge.isDragging = false;
+            showGameOverPopup();
+        }
+
+        function showGameOverPopup() {
+            if (gameOverOverlay) gameOverOverlay.classList.add('visible');
+            if (gameOverPopup) gameOverPopup.classList.add('visible');
+            if (gameOverText) {
+                const calendar = monster && calendars[monster.targetMonth];
+                const monthName = calendar?.monthName || 'diesen Monat';
+                gameOverText.textContent = `Leider konnten wir keinen Zahlungseingang für die Rechnung Nr. 3R8S3 feststellen.`;
+            }
+        }
+
+        function hideGameOverPopup() {
+            if (gameOverOverlay) gameOverOverlay.classList.remove('visible');
+            if (gameOverPopup) gameOverPopup.classList.remove('visible');
+        }
+
+        function drawMonsterSprite(entity) {
+            if (!entity) return;
+
+            ctx.save();
+            const size = entity.size;
+            const alpha = entity.vanishing ? Math.max(0, 1 - entity.vanishProgress) : 1;
+            const scale = entity.vanishing ? Math.max(0.25, 1 - entity.vanishProgress) : 1;
+
+            ctx.translate(entity.x, entity.y);
+            ctx.scale(scale, scale);
+            ctx.globalAlpha = alpha;
+            ctx.font = `${size * 1.8}px "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🧾', 0, 0);
+            ctx.restore();
+        }
+
+        function drawMonsters() {
+            for (const ghost of monsterGhosts) {
+                drawMonsterSprite(ghost);
+            }
+            if (monster) {
+                drawMonsterSprite(monster);
+            }
+        }
+ 
         function resetCanvasToViewport() { 
+
             canvas.width = Math.min(800, window.innerWidth); 
             canvas.height = window.innerHeight; 
         }
@@ -348,6 +697,25 @@
         const SHINE_SPEED = 3.2; // Progress per second for the shine sweep
         let yearlyPeasEarned = 0; // Track peas earned this year
         
+        const MONSTER_START_YEAR = 2;
+        const MONSTER_BASE_SPEED = 0.6;
+        const MONSTER_SPEED_INCREMENT = 0.0075;
+        const MONSTER_VANISH_DURATION = 0.3;
+        const MONSTER_SIZE_RATIO = 0.25;
+        const MONSTER_SPAWN_PAIRS = {
+            0: 2, 2: 0,
+            1: 7, 7: 1,
+            3: 5, 5: 3,
+            4: 10, 10: 4,
+            6: 8, 8: 6,
+            9: 11, 11: 9
+        };
+        let monster = null;
+        let monsterGhosts = [];
+        let monsterSuppressed = false;
+        let gameOver = false;
+
+        
         // Scrubbing motion detection
         let lastSpongeX = 0;
         let lastSpongeY = 0;
@@ -364,13 +732,13 @@
 
         function getTutorialText() {
             if (tutorialPhase === 2) {
-                return "Die Krankenkassenprämien sind um 20% gestiegen. Schaffst du es auch noch durch das 2. Jahr?";
+                return "Die Krankenkassenprämien sind um 20% gestiegen. Schaffst du es durch das 2. Jahr, bevor dich der Prämienschock einholt?";
             }
             return "Schrubbe mit dem Schwamm über die schmutzigen Kalender, um sie zu reinigen!";
         }
 
         function getTutorialIcon() {
-            return tutorialPhase === 2 ? '📈' : '🧽';
+            return tutorialPhase === 2 ? '🧾' : '🧽';
         }
 
         function updateTutorialOverlayText() {
@@ -926,6 +1294,9 @@
                     calendar.shineProgress = 0;
                     calendar.pop = 1.0;
 
+                    if (monster && monster.targetMonth === currentActiveMonth) {
+                        startMonsterVanish('defeated');
+                    }
                     
                     // Add 4 green peas
                     addFourGreenPeas();
@@ -944,6 +1315,7 @@
                         // Roll for heritage event
                         if (Math.random() < heritageEventProbability) {
                             // Heritage event triggered!
+                            suppressMonsterMovement();
                             setTimeout(() => {
                                 showHeritagePopup();
                             }, 500);
@@ -961,6 +1333,12 @@
                 }
             }
             
+            updateMonsterGhosts();
+            if (gameOver) return;
+
+            updateMonster();
+            if (gameOver) return;
+
             if (animationComplete || animationPaused) return;
             
             if (!manualMode && isScreenFull()) { animationPaused = true; console.log("Required above-screen rows filled â€” transitioning to complete stack..."); requestAnimationFrame(() => { generateCompleteStack(); }); return; }
@@ -1344,6 +1722,8 @@
             const greenArea = getGreenPeaArea();
             const bgStartY = greenArea.bgStartRow * GRID_CELL_SIZE;
             drawCalendars(42, bgStartY - 20); // Start after top bar, end before Erbsen-Bank
+            ensureMonsterPresence();
+            drawMonsters();
             
             // Initialize sponge position on first draw if calendars exist
             if (calendars.length > 0 && sponge.x === 0 && sponge.y === 0) {
@@ -1644,7 +2024,7 @@
             const currentTime = performance.now();
             const deltaTime = currentTime - lastFrameTime;
             const shouldTick = !animationComplete && deltaTime >= frameInterval;
-            const needsPassiveDraw = erbsenNotification || isCleaningInProgress || showTutorial;
+            const needsPassiveDraw = erbsenNotification || isCleaningInProgress || showTutorial || gameOver || monsterGhosts.length > 0 || (monster && (monster.waitForScrub && !monster.startedMoving));
             
             if (shouldTick) {
                 lastFrameTime = currentTime - (deltaTime % frameInterval);
@@ -1836,6 +2216,9 @@
             
             // Reset yearly peas counter for next year
             yearlyPeasEarned = 0;
+            monster = null;
+            monsterGhosts = [];
+            monsterSuppressed = false;
             
             // Increment year
             currentYear++;
@@ -1889,6 +2272,11 @@
             gridCols = calcGridCols(); 
             gridRows = calcGridRows();
             recalcDistancePerProgress();
+            monster = null;
+            monsterGhosts = [];
+            monsterSuppressed = false;
+            gameOver = false;
+            hideGameOverPopup();
             
             // Reset year
 
@@ -1997,6 +2385,7 @@
         }
         
         canvas.addEventListener('mousedown', (e) => {
+            if (gameOver) return;
             const pos = getMousePos(e);
             
             // Dismiss tutorial on any click
@@ -2018,6 +2407,10 @@
         });
         
         canvas.addEventListener('mousemove', (e) => {
+            if (gameOver) {
+                canvas.style.cursor = 'default';
+                return;
+            }
             const pos = getMousePos(e);
             
             if (sponge.isDragging) {
@@ -2068,6 +2461,7 @@
         });
         
         canvas.addEventListener('mouseup', () => {
+            if (gameOver) return;
             sponge.isDragging = false;
             canvas.style.cursor = 'default';
             
@@ -2082,6 +2476,7 @@
         });
         
         canvas.addEventListener('mouseleave', () => {
+            if (gameOver) return;
             if (sponge.isDragging) {
                 sponge.isDragging = false;
                 canvas.style.cursor = 'default';
@@ -2104,6 +2499,7 @@
         }
         
 canvas.addEventListener('touchstart', (e) => {
+    if (gameOver) return;
     const pos = getTouchPos(e);
     dismissTutorial();
 
@@ -2121,7 +2517,7 @@ canvas.addEventListener('touchstart', (e) => {
 });
 
 canvas.addEventListener('touchmove', (e) => {
-    if (!sponge.isDragging) return;
+    if (gameOver || !sponge.isDragging) return;
 
     e.preventDefault(); 
     const pos = getTouchPos(e);
@@ -2155,6 +2551,7 @@ canvas.addEventListener('touchmove', (e) => {
 });
 
 canvas.addEventListener('touchend', () => {
+    if (gameOver) return;
     if (sponge.isDragging) {
         sponge.isDragging = false;
         if (isCleaningInProgress) isCleaningInProgress = false;
@@ -2165,6 +2562,7 @@ canvas.addEventListener('touchend', () => {
 
 // New: handle OS/browser interruptions
 canvas.addEventListener('touchcancel', () => {
+    if (gameOver) return;
     if (sponge.isDragging) {
         sponge.isDragging = false;
         if (isCleaningInProgress) isCleaningInProgress = false;
@@ -2175,6 +2573,7 @@ canvas.addEventListener('touchcancel', () => {
 
         // New: handle OS/browser interruptions
         canvas.addEventListener('touchcancel', () => {
+            if (gameOver) return;
             if (sponge.isDragging) {
                 sponge.isDragging = false;
                 if (isCleaningInProgress) isCleaningInProgress = false;
@@ -2197,6 +2596,11 @@ canvas.addEventListener('touchcancel', () => {
         document.getElementById('restart-btn').addEventListener('click', () => {
             window.location.href = "index.html";
         });
+        if (gameOverButton) {
+            gameOverButton.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        }
 
         // Start animation loop (will be paused in manual mode until cascade button is pressed)
         animationPaused = manualMode;
