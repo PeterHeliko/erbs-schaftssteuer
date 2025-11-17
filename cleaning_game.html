@@ -189,6 +189,9 @@
             text-align: center;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
             z-index: 251;
+
+            border: 2px solid #ff6f61;   /* NEW: subtle red frame */
+            animation: popupAppear 0.35s ease-out; /* Reuse your existing popup animation */
         }
         #gameover-popup.visible {
             display: block;
@@ -210,15 +213,22 @@
             border: none;
             color: #1f1f1f;
             font-weight: bold;
-            padding: 12px 28px;
-            border-radius: 50px;
+            padding: 12px 24px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 16px;
             transition: transform 0.2s ease, background 0.2s ease;
+            width: 100%;
         }
         #gameover-popup button:hover {
             background: #ff8a7b;
             transform: translateY(-1px);
+        }
+        #gameover-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
         }
 
         .tutorial-overlay {
@@ -289,12 +299,21 @@
         <button id="tax-popup-button"></button>
     </div>
 
-    <div id="gameover-overlay"></div>
     <div id="gameover-popup">
         <h2>Zahlungsverzug</h2>
-        <p id="gameover-text">Leider konnten wir keinen Zahlungseingang für die Rechnung Nr. 3R8S3 feststellen.</p>
-        <button id="gameover-button">Hauptmenü</button>
+
+        <p id="mahnung-text" style="color:#d7d7d7; font-size:16px; line-height:1.4; margin-bottom:22px;">
+            Auf was verzichtest du, um die Mahnung zu bezahlen?
+        </p>
+
+        <div id="gameover-options">
+            <button class="gameover-option" data-choice="restaurant">Restaurantbesuch</button>
+            <button class="gameover-option" data-choice="kids">Ausflug mit Kindern</button>
+            <button class="gameover-option" data-choice="bio">Teureres Bio-Gemüse</button>
+        </div>
     </div>
+
+
     
     <button id="restart-btn" style="display: none; position: fixed; bottom: 20px; left: 20px; z-index: 300; background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Hauptmenü</button>
 
@@ -307,8 +326,7 @@
         const tutorialIcon = document.getElementById('tutorial-icon');
         const gameOverOverlay = document.getElementById('gameover-overlay');
         const gameOverPopup = document.getElementById('gameover-popup');
-        const gameOverText = document.getElementById('gameover-text');
-        const gameOverButton = document.getElementById('gameover-button');
+        const gameOverOptions = document.querySelectorAll('.gameover-option');
         const SCRUB_DISTANCE_FACTOR = 0.8; // Portion of viewport needed to clean a calendar
         const TOP_BAR_HEIGHT = 42;
         let distancePerProgress = 600;
@@ -622,6 +640,32 @@
         }
 
         function handleMonsterReachedTarget() {
+            if (!monster) return;
+            const targetMonth = monster.targetMonth;
+            const targetYear = currentYear;
+
+            if (forcedHeritagePlan && forcedHeritagePlan.monthIndex === targetMonth && forcedHeritagePlan.year === targetYear) {
+                startMonsterVanish('heritage-trigger');
+                forcedHeritagePlan = null;
+                triggerHeritageEvent('monster');
+                return;
+            }
+
+            if (forcedHeritagePlan) {
+                startMonsterVanish('waiting');
+                return;
+            }
+
+            // If monster catches you in December of Year 2, trigger heritage instead of game over
+            if (currentYear === 2 && targetMonth === 11) {
+                startMonsterVanish('heritage-monster-december');
+                triggerHeritageEvent('december-monster');
+                return;
+            }
+
+            monsterCatchOccurred = true;
+            startMonsterVanish('mahnung');
+            completeMonthAfterCatch(targetMonth);
             if (gameOver) return;
             gameOver = true;
             isCleaningInProgress = false;
@@ -632,11 +676,6 @@
         function showGameOverPopup() {
             if (gameOverOverlay) gameOverOverlay.classList.add('visible');
             if (gameOverPopup) gameOverPopup.classList.add('visible');
-            if (gameOverText) {
-                const calendar = monster && calendars[monster.targetMonth];
-                const monthName = calendar?.monthName || 'diesen Monat';
-                gameOverText.textContent = `Leider konnten wir keinen Zahlungseingang für die Rechnung Nr. 3R8S3 feststellen.`;
-            }
         }
 
         function hideGameOverPopup() {
@@ -702,8 +741,8 @@
         let yearlyPeasEarned = 0; // Track peas earned this year
         
         const MONSTER_START_YEAR = 2;
-        const MONSTER_BASE_SPEED = 0.5;
-        const MONSTER_SPEED_INCREMENT = 0.007;
+        const MONSTER_BASE_SPEED = 0.3;
+        const MONSTER_SPEED_INCREMENT = 0.1;
         const MONSTER_VANISH_DURATION = 0.3;
         const MONSTER_SIZE_RATIO = 0.25;
         const MONSTER_SPAWN_PAIRS = {
@@ -714,11 +753,12 @@
             6: 8, 8: 6,
             9: 11, 11: 9
         };
-        const HERITAGE_PROBABILITY_BASE = 1.4677;
         let monster = null;
         let monsterGhosts = [];
         let monsterSuppressed = false;
         let gameOver = false;
+        let forcedHeritagePlan = null;
+        let monsterCatchOccurred = false;
  
          
         // Scrubbing motion detection
@@ -772,7 +812,6 @@
         
         // Heritage event state
         let heritageEventTriggered = false;
-        let heritageEventProbability = 0; // Increases each month starting from year 2
         let postCascadeTaxDelay = 1000; // Delay after cascade completes before showing tax popup (in ms)
 
         const PEA_SIZE = 12;
@@ -1309,23 +1348,18 @@
                     // Track yearly income
                     yearlyPeasEarned += 4;
                     
+                    const justCleanedMonth = currentActiveMonth;
+                    const justCleanedYear = currentYear;
+
                     // Move to next month
                     currentActiveMonth++;
-                    
-                    // Check for heritage event first (only from year 2 onwards, and only once)
-                    if (currentYear >= 2 && !heritageEventTriggered && currentActiveMonth <= 12) {
-                        // Calculate probability based on current month
-                        heritageEventProbability = Math.min(1, Math.pow(HERITAGE_PROBABILITY_BASE, currentActiveMonth) / 100);
-                        
-                        // Roll for heritage event
-                        if (Math.random() < heritageEventProbability) {
-                            // Heritage event triggered!
-                            suppressMonsterMovement();
-                            setTimeout(() => {
-                                showHeritagePopup();
-                            }, 500);
-                            return; // Don't check for regular tax event
-                        }
+
+                    if (maybeTriggerForcedHeritageAfterCleaning(justCleanedMonth, justCleanedYear)) {
+                        return;
+                    }
+
+                    if (maybeTriggerGuaranteedHeritage(justCleanedMonth, justCleanedYear)) {
+                        return;
                     }
                     
                     // Check if all 12 calendars are cleaned (regular tax event)
@@ -2112,7 +2146,7 @@
             taxPopupStep = 200; // Special code for post-cascade tax event
             
             title.textContent = '🏛️ Steueramt';
-            text.textContent = 'Wir sehen, sie haben auf einen Schlag 50\'000 Erbsen verdient. Dafür haben sie sicher hart gearbeitet?';
+            text.textContent = "Wir sehen, sie haben auf einen Schlag 50'000 Erbsen verdient. Dafür haben sie sicher hart gearbeitet?";
             button.textContent = 'Nein';
             button.classList.add('no-button');
             
@@ -2120,7 +2154,96 @@
             popup.classList.add('visible');
         }
         
+        function triggerHeritageEvent(reason) {
+            if (heritageEventTriggered) return false;
+            heritageEventTriggered = true;
+            forcedHeritagePlan = null;
+            suppressMonsterMovement();
+            setTimeout(() => {
+                showHeritagePopup();
+            }, 500);
+            return true;
+        }
+
+        function scheduleForcedHeritagePlan(targetMonthIndex, targetYear) {
+            if (typeof targetMonthIndex === 'number' && typeof targetYear === 'number') {
+                forcedHeritagePlan = {
+                    monthIndex: targetMonthIndex,
+                    year: targetYear
+                };
+                return;
+            }
+            const nextMonthIndex = (currentActiveMonth + 1) % 12;
+            const wrapsYear = currentActiveMonth + 1 >= 12;
+            const computedYear = currentYear + (wrapsYear ? 1 : 0);
+            forcedHeritagePlan = {
+                monthIndex: nextMonthIndex,
+                year: computedYear
+            };
+        }
+
+        function getUpcomingMonthReference() {
+            const normalizedMonth = ((currentActiveMonth % 12) + 12) % 12;
+            const yearOffset = Math.floor(currentActiveMonth / 12);
+            return {
+                monthIndex: normalizedMonth,
+                year: currentYear + yearOffset
+            };
+        }
+
+        function completeMonthAfterCatch(monthIndex) {
+            const calendar = calendars[monthIndex];
+            if (calendar && !calendar.isClean) {
+                calendar.isClean = true;
+                calendar.isDirty = false;
+                calendar.progress = 1;
+                calendar.scrubbingDistance = distancePerProgress;
+                calendar.shineActive = false;
+                calendar.shineProgress = 0;
+                calendar.pop = 0;
+            }
+            if (currentActiveMonth <= monthIndex) {
+                currentActiveMonth = monthIndex + 1;
+            }
+            if (currentActiveMonth > 12) {
+                currentActiveMonth = 12;
+            }
+        }
+
+        function maybeTriggerForcedHeritageAfterCleaning(monthIndex, year) {
+            if (!forcedHeritagePlan) return false;
+            if (forcedHeritagePlan.monthIndex === monthIndex && forcedHeritagePlan.year === year) {
+                forcedHeritagePlan = null;
+                return triggerHeritageEvent('cleaned');
+            }
+            return false;
+        }
+
+        function maybeTriggerGuaranteedHeritage(monthIndex, year) {
+            if (heritageEventTriggered || monsterCatchOccurred) return false;
+            if (year === 2 && monthIndex === 11) {
+                return triggerHeritageEvent('december-guarantee');
+            }
+            return false;
+        }
+        
+        function handleDebtChoice(choice) {
+            hideGameOverPopup();
+            const yearCompleted = currentActiveMonth >= 12;
+            const upcomingMonth = getUpcomingMonthReference();
+            gameOver = false;
+            scheduleForcedHeritagePlan(upcomingMonth.monthIndex, upcomingMonth.year);
+            if (yearCompleted && taxPopupStep === 0) {
+                setTimeout(() => {
+                    if (taxPopupStep === 0) {
+                        showTaxPopup();
+                    }
+                }, 500);
+            }
+        }
+        
         function handleTaxPopupButton() {
+
             const overlay = document.getElementById('tax-overlay');
             const popup = document.getElementById('tax-popup');
             const text = document.getElementById('tax-popup-text');
@@ -2338,7 +2461,8 @@
             
             // Reset heritage event state
             heritageEventTriggered = false;
-            heritageEventProbability = 0;
+            forcedHeritagePlan = null;
+            monsterCatchOccurred = false;
             
             // Hide restart button
             document.getElementById('restart-btn').style.display = 'none';
@@ -2418,10 +2542,9 @@
             }
             if (gameOver) return;
             
-            // Dismiss tutorial on any click
-            dismissTutorial();
             
             if (isSpongeClicked(pos.x, pos.y)) {
+                dismissTutorial();
                 sponge.isDragging = true;
                 sponge.offsetX = pos.x - sponge.x;
                 sponge.offsetY = pos.y - sponge.y;
@@ -2551,9 +2674,9 @@ canvas.addEventListener('touchstart', (e) => {
         return;
     }
     if (gameOver) return;
-    dismissTutorial();
 
     if (isSpongeClicked(pos.x, pos.y)) {
+        dismissTutorial();
         e.preventDefault();
         sponge.isDragging = true;
         sponge.offsetX = pos.x - sponge.x;
@@ -2646,9 +2769,9 @@ canvas.addEventListener('touchcancel', () => {
         document.getElementById('restart-btn').addEventListener('click', () => {
             window.location.href = "index.html";
         });
-        if (gameOverButton) {
-            gameOverButton.addEventListener('click', () => {
-                window.location.href = 'index.html';
+        if (gameOverOptions && gameOverOptions.length) {
+            gameOverOptions.forEach(button => {
+                button.addEventListener('click', () => handleDebtChoice(button.dataset.choice));
             });
         }
 
