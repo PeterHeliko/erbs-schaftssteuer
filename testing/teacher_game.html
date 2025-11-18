@@ -54,7 +54,7 @@
         }
         #question-board {
             position: fixed;
-            top: clamp(50px, 6vh, 92px);
+            top: clamp(42px, 5vh, 72px);
             bottom: clamp(160px, 19vh, 240px);
             left: 50%;
             transform: translateX(-50%);
@@ -81,14 +81,15 @@
         }
         #question-board::before {
             top: 0;
-            height: 42px;
+            height: 24px;
             background: linear-gradient(180deg, rgba(42,42,42,0.9), rgba(42,42,42,0));
         }
         #question-board::after {
             bottom: 0;
-            height: 80px;
+            height: 64px;
             background: linear-gradient(0deg, rgba(42,42,42,0.92), rgba(42,42,42,0));
         }
+
         #question-board.question-board--overflow::before,
         #question-board.question-board--overflow::after {
             opacity: 1;
@@ -102,15 +103,24 @@
             flex-direction: column;
             gap: 3px;
             max-height: 100%;
-            overflow-y: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            padding-right: 4px;
             width: 100%;
             flex: 1 1 auto;
+            padding: 24px 4px 0 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            scrollbar-width: none;
+            position: relative;
         }
         #question-list::-webkit-scrollbar {
             display: none;
+        }
+        #question-list::after {
+            content: '';
+            display: block;
+            flex: 0 0 auto;
+            width: 100%;
+            height: 96px;
         }
         .question-card {
             background: rgba(18, 18, 18, 0.92);
@@ -508,8 +518,10 @@
         let monthlyCompletionsLocked = false;
         let showTutorial = true;
         let tutorialPhase = 1;
-
+        let questionScrollAdvanceQueued = false;
+ 
         const PEA_SIZE = 12;
+
         const PEA_RADIUS = PEA_SIZE / 2;
         const TOTAL_PEAS = 50000;
         const SPAWN_RATE = 675;
@@ -716,21 +728,33 @@
  
         function renderQuestions() {
             if (!questionList) return;
+
+            // clear list
             questionList.innerHTML = '';
+
             examQuestions.forEach((question, idx) => {
+
                 const card = document.createElement('div');
                 const state = question.state || 'future';
+
                 card.classList.add('question-card', `state-${state}`);
-                if (state !== 'active') {
-                    card.classList.add('compact');
-                }
+                if (state !== 'active') card.classList.add('compact');
+
                 if (state === 'done') {
-                    const evalClass = question.userEvaluation === 'correct' ? 'done-correct' : 'done-incorrect';
+                    const evalClass = question.userEvaluation === 'correct'
+                        ? 'done-correct'
+                        : 'done-incorrect';
                     card.classList.add(evalClass);
                 }
+
+                // icon for done cards
                 const icon = state === 'done'
-                    ? `<div class="question-icon ${question.userEvaluation === 'correct' ? 'correct' : 'incorrect'}">${question.userEvaluation === 'correct' ? '✔️' : '✖️'}</div>`
+                    ? `<div class="question-icon ${question.userEvaluation === 'correct' ? 'correct' : 'incorrect'}">
+                        ${question.userEvaluation === 'correct' ? '✔️' : '✖️'}
+                    </div>`
                     : '';
+
+                // header
                 const header = `
                     <div class="question-head">
                         <div class="question-month">${monthNames[idx]}</div>
@@ -738,48 +762,54 @@
                         <div class="question-subject">${question.subject}</div>
                     </div>
                 `;
+
+                // body for active card
                 const body = state === 'active'
                     ? `<div class="question-body">
                             <p>${question.content}</p>
                             <p class="question-answer">${question.answer}</p>
-                        </div>
-                        <div class="question-actions">
+                    </div>
+                    <div class="question-actions">
                             <button class="decision-btn correct" data-choice="correct">Richtig</button>
                             <button class="decision-btn incorrect" data-choice="incorrect">Falsch</button>
-                        </div>`
+                    </div>`
                     : '';
+
                 card.innerHTML = header + body;
+
+                // attach handlers for active buttons
                 if (state === 'active') {
                     const buttons = card.querySelectorAll('.decision-btn');
                     buttons.forEach(btn => {
                         btn.disabled = monthlyCompletionsLocked || heritageEventTriggered;
-                        btn.addEventListener('click', () => handleQuestionDecision(idx, btn.dataset.choice));
+                        btn.addEventListener('click', () =>
+                            handleQuestionDecision(idx, btn.dataset.choice)
+                        );
                     });
-                }
-                // List of handwriting fonts
-                const handwritingFonts = [
-                    "'Patrick Hand'", 
-                    "'Caveat'", 
-                    "'Gloria Hallelujah'", 
-                    "'Shadows Into Light'",
-                    "'Indie Flower'",
-                    "'Reenie Beanie'",
-                    "'Just Another Hand'"
-                ];
 
-                // Apply random font to the answer text
-                if (state === 'active') {
+                    // handwriting fonts for answer
+                    const handwritingFonts = [
+                        "'Patrick Hand'",
+                        "'Caveat'",
+                        "'Gloria Hallelujah'",
+                        "'Shadows Into Light'",
+                        "'Indie Flower'",
+                        "'Reenie Beanie'",
+                        "'Just Another Hand'"
+                    ];
                     const answer = card.querySelector('.question-answer');
                     if (answer) {
                         const randomFont = handwritingFonts[Math.floor(Math.random() * handwritingFonts.length)];
-                        answer.style.fontFamily = randomFont + ", cursive";
+                        answer.style.fontFamily = `${randomFont}, cursive`;
                     }
                 }
 
                 questionList.appendChild(card);
             });
+
             syncQuestionBoardWindow();
         }
+
  
         function handleQuestionDecision(questionIndex, decision) {
             if (monthlyCompletionsLocked || heritageEventTriggered) return;
@@ -787,6 +817,7 @@
             if (!question || question.state !== 'active') return;
             question.userEvaluation = decision === 'correct' ? 'correct' : 'incorrect';
             question.state = 'done';
+            questionScrollAdvanceQueued = true;
             renderQuestions();
             handleMonthCompletion();
         }
@@ -794,24 +825,110 @@
         function syncQuestionBoardWindow() {
             if (!questionBoard || !questionList) return;
             requestAnimationFrame(() => {
-                const containerHeight = questionBoard.clientHeight;
-                if (!containerHeight) return;
+                // If the element has no height yet, bail
+                const viewportHeight = questionList.clientHeight;
+                if (!viewportHeight) return;
+
+                // Toggle overflow class as before (based on element scroll, not parent)
                 const contentHeight = questionList.scrollHeight;
-                const overflowActive = contentHeight > containerHeight;
-                if (overflowActive) {
-                    questionBoard.classList.add('question-board--overflow');
-                    const activeCard = questionList.querySelector('.question-card.state-active');
-                    const activeBottom = activeCard ? activeCard.offsetTop + activeCard.offsetHeight : contentHeight;
-                    const targetScroll = Math.max(0, activeBottom - containerHeight + 12);
-                    questionList.scrollTop = targetScroll;
-                } else {
-                    questionBoard.classList.remove('question-board--overflow');
-                    questionList.scrollTop = 0;
+                questionBoard.classList.toggle('question-board--overflow', contentHeight > viewportHeight);
+
+                const cards = Array.from(questionList.querySelectorAll('.question-card'));
+                const upcomingCards = cards.filter(card => !card.classList.contains('state-done'));
+                if (!upcomingCards.length) {
+                    if (contentHeight <= viewportHeight) {
+                        questionList.scrollTop = 0;
+                    }
+                    questionScrollAdvanceQueued = false;
+                    return;
                 }
+
+                // Read safe margins (top/bottom) once — keep them constants or derive from CSS
+                const gradientTop = 24;
+                const gradientBottom = 64;
+
+                // Convert the safe region into viewport coordinates using the list bounding rect
+                const listRect = questionList.getBoundingClientRect();
+
+                // Helper: returns card rect relative to the list content area (top in pixels from content start)
+                function cardRects(card) {
+                    const cardRect = card.getBoundingClientRect();
+                    // convert to coordinates relative to list's client box top
+                    const topInList = (cardRect.top - listRect.top) + questionList.scrollTop;
+                    const bottomInList = topInList + cardRect.height;
+                    return { topInList, bottomInList, height: cardRect.height };
+                }
+
+                // Compute safe region (in list-content coordinates)
+                const currentScroll = questionList.scrollTop;
+                const safeTop = currentScroll + gradientTop;
+                const safeBottom = currentScroll + viewportHeight - gradientBottom;
+
+                // Determine first and last upcoming rectangles
+                const firstUpcoming = upcomingCards[0];
+                const lastUpcoming = upcomingCards[upcomingCards.length - 1];
+                const firstRect = cardRects(firstUpcoming);
+                const lastRect = cardRects(lastUpcoming);
+
+                const maxScroll = Math.max(0, contentHeight - viewportHeight);
+                let targetScroll = currentScroll;
+
+                const CARD_GAP = 3;
+
+                const futureOverflowBottom = lastRect.bottomInList > safeBottom + 0.5;
+
+                if (questionScrollAdvanceQueued && futureOverflowBottom) {
+                    // try to hide any 'done' card that overlaps the top safe area
+                    const visibleDone = cards.find(card => {
+                        if (!card.classList.contains('state-done')) return false;
+                        const r = cardRects(card);
+                        return (r.topInList < firstRect.topInList) && (r.bottomInList > safeTop);
+                    });
+
+                    if (visibleDone) {
+                        const v = cardRects(visibleDone);
+                        const hideThreshold = v.bottomInList + CARD_GAP;
+                        targetScroll = Math.min(maxScroll, Math.max(targetScroll, hideThreshold - gradientTop));
+                    } else {
+                        // fallback shift: nudge down by the first upcoming height
+                        targetScroll = Math.min(maxScroll, currentScroll + firstRect.height + CARD_GAP);
+                    }
+                    questionScrollAdvanceQueued = false;
+                } else {
+                    // Ensure first upcoming is not hidden behind top gradient
+                    if (firstRect.topInList < safeTop - 0.5) {
+                        targetScroll = Math.max(0, firstRect.topInList - gradientTop);
+                    }
+                    // Ensure last upcoming bottom is visible above bottom gradient
+                    if (futureOverflowBottom) {
+                        targetScroll = Math.min(maxScroll, lastRect.bottomInList - (viewportHeight - gradientBottom));
+                    }
+                    questionScrollAdvanceQueued = false;
+                }
+
+                // Ensure active card visible within safe region as final check
+                const activeCard = questionList.querySelector('.question-card.state-active');
+                if (activeCard) {
+                    const a = cardRects(activeCard);
+                    const allowedTop = targetScroll + gradientTop;
+                    const allowedBottom = targetScroll + viewportHeight - gradientBottom;
+                    if (a.topInList < allowedTop) {
+                        targetScroll = Math.max(0, a.topInList - gradientTop);
+                    } else if (a.bottomInList > allowedBottom) {
+                        targetScroll = Math.min(maxScroll, a.bottomInList - (viewportHeight - gradientBottom));
+                    }
+                }
+
+                targetScroll = Math.max(0, Math.min(maxScroll, Math.round(targetScroll)));
+                questionList.scrollTop = targetScroll;
             });
         }
 
+
+
+ 
         function setQuestionBoardCascadeState(active) {
+
             if (!questionBoard) return;
             questionBoard.classList.toggle('question-board--cascade', Boolean(active));
         }
