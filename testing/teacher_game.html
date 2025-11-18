@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Game - Erbs-Schafts-Spiel</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            min-height: 100vh;
+            background: #2a2a2a;
+        }
+        canvas {
+            display: block;
+            background: #2a2a2a;
+            width: 100%;
+            max-width: 800px;
+        }
+        #top-bar {
+            display: none;
+        }
+        #controls {
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 12px;
+            border-radius: 8px;
+            z-index: 120;
+            font-size: 12px;
+            color: #fff;
+            min-width: 180px;
+        }
+        #month-label {
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+            margin: 2px 0;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background: #45a049;
+        }
+        #scroll-indicator {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translate3d(-50%, 0, 0);
+            width: min(80vw, 460px);
+            background: rgba(0, 0, 0, 0.72);
+            color: #FFD700;
+            padding: 14px;
+            border-radius: 16px;
+            font-size: clamp(14px, 4vw, 16px);
+            font-weight: 500;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(10px);
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.45s ease, transform 0.45s ease;
+            will-change: opacity, transform;
+        }
+        #scroll-indicator.hidden {
+            opacity: 0;
+            transform: translate3d(-50%, -24px, 0);
+        }
+        #tax-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        #tax-popup.visible {
+            display: block;
+            animation: popupAppear 0.3s ease-out;
+        }
+        @keyframes popupAppear {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        #tax-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 199;
+        }
+        #tax-overlay.visible {
+            display: block;
+        }
+        #tax-popup h2 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 24px;
+        }
+        #tax-popup p {
+            margin: 0 0 20px 0;
+            color: #666;
+            line-height: 1.5;
+        }
+        #tax-popup button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #tax-popup button.no-button {
+            background: #ae0c00;
+        }
+        #tax-popup button.no-button:hover {
+            background: #ae0c00;
+        }
+        .tutorial-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(16px, 4vw, 48px);
+            z-index: 150;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .tutorial-overlay.visible {
+            opacity: 1;
+        }
+        .tutorial-overlay .tutorial-card {
+            width: min(520px, 100%);
+            background: rgba(0, 0, 0, 0.82);
+            border: 2px solid #4CAF50;
+            border-radius: 18px;
+            padding: clamp(10px, 2.0vw, 16px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+            color: #ffffff;
+            text-align: center;
+            transform: translateY(10px) scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .tutorial-overlay.visible .tutorial-card {
+            transform: translateY(0) scale(1);
+        }
+        .tutorial-overlay .tutorial-icon {
+            font-size: clamp(32px, 6vw, 48px);
+            margin-bottom: 12px;
+        }
+        .tutorial-overlay .tutorial-text p {
+            margin: clamp(16px, 4vw, 20px);
+            font-size: clamp(16px, 4vw, 20px);
+            line-height: 1.4;
+        }
+        #restart-btn,
+        #info-btn {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            position: fixed;
+            bottom: 20px;
+            z-index: 300;
+            background: rgba(26, 26, 26, 0.6);
+            color: white;
+            border: none;
+            width: 105px;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 10px;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        #restart-btn { left: calc(50% - 115px); }
+        #info-btn { right: calc(50% - 115px); }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"><canvas id="canvas"></canvas></div>
+
+    <div id="top-bar">
+        <div id="year-display">Jahr 1</div>
+        <div id="money-display">0.-</div>
+    </div>
+
+    <div id="controls">
+        <div id="month-label">Monat: Januar (Jahr 1)</div>
+        <button id="complete-month-btn">Monat abschliessen</button>
+    </div>
+
+    <div id="scroll-indicator" class="hidden">Nach oben scrollen um deinen ganzen Reichtum zu entdecken</div>
+
+    <div id="tutorial-overlay" class="tutorial-overlay" aria-hidden="false" aria-live="polite">
+        <div class="tutorial-card">
+            <div class="tutorial-icon" id="tutorial-icon">📋</div>
+            <div class="tutorial-text" id="tutorial-text"></div>
+        </div>
+    </div>
+
+    <div id="tax-overlay"></div>
+    <div id="tax-popup">
+        <h2 id="tax-popup-title">🏛️ Steueramt</h2>
+        <p id="tax-popup-text"></p>
+        <button id="tax-popup-button"></button>
+    </div>
+
+    <button id="restart-btn">Hauptmenü</button>
+    <button id="info-btn">Mehr Info</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const scrollIndicator = document.getElementById('scroll-indicator');
+        const tutorialOverlay = document.getElementById('tutorial-overlay');
+        const tutorialText = document.getElementById('tutorial-text');
+        const tutorialIcon = document.getElementById('tutorial-icon');
+        const monthLabel = document.getElementById('month-label');
+        const completeMonthBtn = document.getElementById('complete-month-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const infoBtn = document.getElementById('info-btn');
+        const taxOverlay = document.getElementById('tax-overlay');
+        const taxPopup = document.getElementById('tax-popup');
+        const taxPopupText = document.getElementById('tax-popup-text');
+        const taxPopupButton = document.getElementById('tax-popup-button');
+        const taxPopupTitle = document.getElementById('tax-popup-title');
+
+        const TOP_BAR_HEIGHT = 42;
+        const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+        const tutorialMessages = {
+            1: { icon: '📋', text: 'Platzhalter-Tutorial Jahr 1: Teste den Monats-Button, um Einkommen zu sammeln.' },
+            2: { icon: '🏦', text: 'Platzhalter-Tutorial Jahr 2: Bleib dran bis Dezember, um das Erbe zu erleben.' }
+        };
+
+        let currentYear = 1;
+        let currentMonthIndex = 0;
+        let yearlyPeasEarned = 0;
+        let currentMoney = 0;
+        let monthlyCompletionsLocked = false;
+        let showTutorial = true;
+        let tutorialPhase = 1;
+
+        const PEA_SIZE = 12;
+        const PEA_RADIUS = PEA_SIZE / 2;
+        const TOTAL_PEAS = 50000;
+        const SPAWN_RATE = 675;
+        const FALL_SPEED = 67.5;
+        const RED_BLINK_TIME = 1000;
+        const GRID_CELL_SIZE = PEA_SIZE;
+
+        function calcGridCols() { return Math.max(1, Math.floor(canvas.width / GRID_CELL_SIZE)); }
+        function calcGridRows() { return Math.max(1, Math.floor(canvas.height / GRID_CELL_SIZE)); }
+
+        let gridCols = 0;
+        let gridRows = 0;
+        let columnsToSpawn = [];
+        let currentBatchIndex = 0;
+        const occupiedGrid = new Set();
+        const lastSpawnTime = new Map();
+
+        let peas = [];
+        let settledPeas = [];
+        let spawnedCount = 0;
+        let frameCount = 0;
+        let greenPeaPlacementIndex = 0;
+        let erbsenNotification = null;
+
+        const peaColors = ['#FFEB3B', '#FFD54F', '#FFCA28', '#FFC107', '#FFB300'];
+        const greenPeaColors = ['#7CB342', '#8BC34A', '#9CCC65', '#AED581', '#689F38'];
+
+        let animationComplete = false;
+        let manualMode = true;
+        let animationPaused = true;
+        let allowScrollIndicatorReveal = false;
+        let allowResetButtonsReveal = false;
+        let resetButtonsShown = false;
+
+        let taxPopupStep = 0;
+        let heritageEventTriggered = false;
+        let postCascadeTaxDelay = 1000;
+
+        let lastFrameTime = performance.now();
+        let lastDrawTime = performance.now();
+        let frameDeltaSeconds = 0;
+        const DRAW_INTERVAL = 1000 / 60;
+        const TARGET_FPS   = 30;              // desired frame rate
+        const FRAME_INTERVAL = 1000 / TARGET_FPS; // ≈33 ms per frame
+
+        let menuButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
+        let menuButtonHover = false;
+
+        resetCanvasToViewport();
+        gridCols = calcGridCols();
+        gridRows = calcGridRows();
+        initializeSpawnOrder();
+        greenPeaPlacementIndex = 0;
+        updateMonthLabel();
+        syncTutorialOverlay();
+
+        function resetCanvasToViewport() {
+            canvas.width = Math.min(800, window.innerWidth);
+            canvas.height = window.innerHeight;
+        }
+
+        function getGridKey(col, row) { return `${col},${row}`; }
+        function isGridOccupied(col, row) {
+            if (row >= gridRows) return true;
+            if (col < 0 || col >= gridCols) return true;
+            return occupiedGrid.has(getGridKey(col, row));
+        }
+        function occupyGrid(col, row) { occupiedGrid.add(getGridKey(col, row)); }
+
+        function initializeSpawnOrder() {
+            columnsToSpawn = [];
+            for (let i = 0; i < TOTAL_PEAS; i++) {
+                columnsToSpawn.push(i % gridCols);
+            }
+            for (let i = columnsToSpawn.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [columnsToSpawn[i], columnsToSpawn[j]] = [columnsToSpawn[j], columnsToSpawn[i]];
+            }
+        }
+
+        function getGreenPeaArea() {
+            const startRow = gridRows - 10;
+            const endRow = gridRows;
+            return {
+                startRow,
+                endRow,
+                bgStartRow: startRow - 1
+            };
+        }
+
+        function addFourGreenPeas() {
+            const greenArea = getGreenPeaArea();
+            const lowerQuarterStartRow = greenArea.startRow;
+            const maxRow = greenArea.endRow;
+            const marginCols = 2;
+            const startCol = marginCols;
+            const endCol = gridCols - marginCols;
+            const availableCols = Math.max(1, endCol - startCol);
+
+            for (let i = 0; i < 4; i++) {
+                const currentIndex = greenPeaPlacementIndex + i;
+                setTimeout(() => {
+                    const colOffset = currentIndex % availableCols;
+                    const col = startCol + colOffset;
+                    const row = lowerQuarterStartRow + Math.floor(currentIndex / availableCols);
+
+                    if (row >= maxRow || isGridOccupied(col, row)) {
+                        return;
+                    }
+
+                    const pea = {
+                        x: col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                        y: row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                        col,
+                        row,
+                        colorIndex: Math.floor(Math.random() * greenPeaColors.length),
+                        settled: true,
+                        isGreen: true,
+                        isPulsating: true,
+                        pulseTime: 0,
+                        pulseDuration: 6,
+                        baseRadius: PEA_RADIUS
+                    };
+                    settledPeas.push(pea);
+                    occupyGrid(col, row);
+                    currentMoney += 1000;
+
+                    const pulseInterval = setInterval(() => {
+                        pea.pulseTime++;
+                        if (pea.pulseTime >= pea.pulseDuration) {
+                            pea.isPulsating = false;
+                            clearInterval(pulseInterval);
+                        }
+                        draw();
+                    }, 16);
+                }, i * 25);
+            }
+
+            greenPeaPlacementIndex += 4;
+            erbsenNotification = {
+                text: '+4 Erbsen',
+                opacity: 1,
+                offsetY: 0,
+                startTime: performance.now(),
+                isNegative: false
+            };
+        }
+
+        function repositionGreenPeas() {
+            const greenArea = getGreenPeaArea();
+            const lowerQuarterStartRow = greenArea.startRow;
+            const marginCols = 2;
+            const startCol = marginCols;
+            const endCol = gridCols - marginCols;
+            const availableCols = Math.max(1, endCol - startCol);
+
+            const greenPeas = settledPeas.filter(p => p.isGreen);
+            greenPeas.forEach(pea => {
+                occupiedGrid.delete(getGridKey(pea.col, pea.row));
+            });
+            greenPeas.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+
+            greenPeas.forEach((pea, index) => {
+                const colOffset = index % availableCols;
+                const col = startCol + colOffset;
+                const row = lowerQuarterStartRow + Math.floor(index / availableCols);
+                pea.targetX = col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                pea.targetY = row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                pea.isMoving = true;
+                pea.moveStartTime = performance.now();
+                pea.startX = pea.x;
+                pea.startY = pea.y;
+                pea.targetCol = col;
+                pea.targetRow = row;
+            });
+        }
+
+        function activateGreenPea(greenPea) {
+            const columnsToCheck = [greenPea.col - 1, greenPea.col, greenPea.col + 1];
+            const greenPeasToActivate = settledPeas.filter(p => p.isGreen && columnsToCheck.includes(p.col) && p.row >= greenPea.row);
+            greenPeasToActivate.sort((a, b) => a.row - b.row);
+
+            for (const pea of greenPeasToActivate) {
+                const index = settledPeas.indexOf(pea);
+                if (index > -1) {
+                    settledPeas.splice(index, 1);
+                }
+                occupiedGrid.delete(getGridKey(pea.col, pea.row));
+                pea.settled = false;
+                pea.isFalling = true;
+                pea.update = Pea.prototype.update;
+                pea.settleInGrid = Pea.prototype.settleInGrid;
+                peas.push(pea);
+            }
+        }
+
+        class Pea {
+            constructor(col) {
+                this.col = col;
+                this.x = col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                this.y = -PEA_RADIUS - Math.random() * 600;
+                this.settled = false;
+                this.isGreen = false;
+                this.isFalling = false;
+            }
+            update() {
+                if (this.settled) return;
+                this.y += FALL_SPEED;
+                const currentRow = Math.floor(this.y / GRID_CELL_SIZE);
+
+                if (currentRow >= gridRows - 1) {
+                    this.settleInGrid(this.col, gridRows - 1);
+                    return;
+                }
+
+                if (!this.isGreen) {
+                    const greenPeaInCurrentRow = settledPeas.find(p => p.isGreen && p.col === this.col && p.row === currentRow);
+                    if (greenPeaInCurrentRow) {
+                        activateGreenPea(greenPeaInCurrentRow);
+                    }
+                }
+
+                const nextRow = currentRow + 1;
+                const nextRowHasNonGreenPea = settledPeas.find(p => !p.isGreen && p.col === this.col && p.row === nextRow);
+                if (nextRowHasNonGreenPea) {
+                    this.settleInGrid(this.col, currentRow);
+                }
+            }
+            settleInGrid(col, row) {
+                if (isGridOccupied(col, row)) {
+                    for (let r = row; r >= -4; r--) {
+                        if (!isGridOccupied(col, r)) {
+                            row = r;
+                            break;
+                        }
+                    }
+                }
+                this.x = col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                this.y = row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                this.row = row;
+                this.settled = true;
+                this.isFalling = false;
+                occupyGrid(col, row);
+            }
+        }
+
+        function spawnPeas() {
+            const rate = Math.min(SPAWN_RATE, TOTAL_PEAS - spawnedCount);
+            const MIN_SPAWN_GAP = 1;
+            let spawned = 0;
+            let attempts = 0;
+            const maxAttempts = rate * 3;
+            while (spawned < rate && spawnedCount < TOTAL_PEAS && attempts < maxAttempts) {
+                attempts++;
+                const col = columnsToSpawn[currentBatchIndex % columnsToSpawn.length];
+                const lastSpawn = lastSpawnTime.get(col) || -Infinity;
+                if (frameCount - lastSpawn >= MIN_SPAWN_GAP) {
+                    peas.push(new Pea(col));
+                    lastSpawnTime.set(col, frameCount);
+                    spawnedCount++;
+                    spawned++;
+                }
+                currentBatchIndex++;
+            }
+        }
+
+        function isScreenFull() {
+            const requiredRows = [-1, -2, -3, -4];
+            for (const r of requiredRows) {
+                for (let col = 0; col < gridCols; col++) {
+                    if (!occupiedGrid.has(getGridKey(col, r))) return false;
+                }
+            }
+            return true;
+        }
+
+        function generateCompleteStack() {
+            gridCols = calcGridCols();
+            gridRows = calcGridRows();
+            const totalRows = Math.ceil(TOTAL_PEAS / gridCols);
+            const totalHeight = totalRows * GRID_CELL_SIZE;
+            const extraRowsAbove = Math.max(0, totalRows - gridRows);
+
+            const visibleHeight = window.innerHeight;
+            const visibleWidth = canvas.width;
+            const visibleSnapshot = ctx.getImageData(0, 0, visibleWidth, visibleHeight);
+
+            const preservedVisible = [];
+            function addPreserved(pea) {
+                const oldRow = Math.floor((pea.y + 0.5) / GRID_CELL_SIZE);
+                preservedVisible.push({ x: pea.x, y: pea.y, col: pea.col, oldRow, colorIndex: pea.colorIndex, isGreen: pea.isGreen });
+            }
+
+            const settledSnapshot = settledPeas.slice();
+            const activeSnapshot = peas.slice();
+
+            settledSnapshot.forEach((pea, i) => {
+                if (pea.y >= 0 && pea.y < visibleHeight) {
+                    const colorIndex = pea.colorIndex !== undefined ? pea.colorIndex : (i % peaColors.length);
+                    addPreserved({ ...pea, colorIndex });
+                }
+            });
+            activeSnapshot.forEach((pea, i) => {
+                if (pea.y >= 0 && pea.y < visibleHeight) {
+                    const colorIndex = pea.colorIndex !== undefined ? pea.colorIndex : (i % peaColors.length);
+                    addPreserved({ ...pea, colorIndex });
+                }
+            });
+
+            peas = [];
+            settledPeas = [];
+            occupiedGrid.clear();
+
+            const locked = new Set();
+
+            for (const p of preservedVisible) {
+                const newRow = p.oldRow + extraRowsAbove;
+                const newY = newRow * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+                const pea = {
+                    x: p.x,
+                    y: newY,
+                    col: p.col,
+                    row: newRow,
+                    colorIndex: p.colorIndex,
+                    settled: true,
+                    isGreen: p.isGreen || false
+                };
+                settledPeas.push(pea);
+                occupyGrid(p.col, newRow);
+                locked.add(getGridKey(p.col, newRow));
+            }
+
+            for (let row = 0; row < extraRowsAbove; row++) {
+                const flippedRow = extraRowsAbove - 1 - row;
+                for (let col = 0; col < gridCols; col++) {
+                    const key = getGridKey(col, flippedRow);
+                    if (!locked.has(key)) {
+                        const pea = {
+                            x: col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            y: flippedRow * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            col,
+                            row: flippedRow,
+                            colorIndex: Math.floor(Math.random() * peaColors.length),
+                            settled: true,
+                            isGreen: false
+                        };
+                        settledPeas.push(pea);
+                        occupyGrid(col, flippedRow);
+                    }
+                }
+            }
+
+            for (let row = extraRowsAbove; row < totalRows; row++) {
+                for (let col = 0; col < gridCols; col++) {
+                    const key = getGridKey(col, row);
+                    if (!locked.has(key)) {
+                        const pea = {
+                            x: col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            y: row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2,
+                            col,
+                            row,
+                            colorIndex: Math.floor(Math.random() * peaColors.length),
+                            settled: true,
+                            isGreen: false
+                        };
+                        settledPeas.push(pea);
+                        occupyGrid(col, row);
+                    }
+                }
+            }
+
+            canvas.height = totalHeight;
+            gridRows = totalRows;
+            document.body.style.overflow = 'scroll';
+            animationComplete = true;
+
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            draw();
+            ctx.putImageData(visibleSnapshot, 0, totalHeight - visibleHeight);
+
+            const targetScrollY = document.documentElement.scrollHeight - window.innerHeight;
+            window.scrollTo(0, targetScrollY);
+
+            setTimeout(() => {
+                scrollIndicator.textContent = 'Nach oben scrollen um deinen ganzen Reichtum zu entdecken';
+                updateScrollIndicator();
+            }, 100);
+        }
+
+        function lockMonthProgression(lock) {
+            monthlyCompletionsLocked = lock;
+            completeMonthBtn.disabled = lock || heritageEventTriggered;
+        }
+
+        function updateMonthLabel() {
+            if (!monthLabel) return;
+            if (currentMonthIndex < 12) {
+                monthLabel.textContent = `Monat: ${monthNames[currentMonthIndex]} (Jahr ${currentYear})`;
+            } else {
+                monthLabel.textContent = `Alle Monate in Jahr ${currentYear} abgeschlossen`;
+            }
+        }
+
+        function handleMonthCompletion() {
+            if (monthlyCompletionsLocked || heritageEventTriggered) return;
+            if (currentMonthIndex >= 12) return;
+            dismissTutorial();
+            addFourGreenPeas();
+            yearlyPeasEarned += 4;
+            currentMonthIndex++;
+            updateMonthLabel();
+
+            if (currentYear === 1 && currentMonthIndex >= 12) {
+                lockMonthProgression(true);
+                showTaxPopup();
+            } else if (currentYear === 2 && currentMonthIndex >= 12 && !heritageEventTriggered) {
+                lockMonthProgression(true);
+                triggerHeritageEvent('december-teacher');
+            }
+        }
+
+        function syncTutorialOverlay() {
+            if (!tutorialOverlay) return;
+            const content = tutorialMessages[tutorialPhase] || tutorialMessages[1];
+            tutorialText.innerHTML = `<p>${content.text}</p>`;
+            tutorialIcon.textContent = content.icon;
+            tutorialOverlay.classList.toggle('visible', showTutorial);
+            tutorialOverlay.setAttribute('aria-hidden', String(!showTutorial));
+        }
+
+        function dismissTutorial() {
+            if (!showTutorial) return;
+            showTutorial = false;
+            syncTutorialOverlay();
+        }
+
+        function startTutorialPhase(phase) {
+            tutorialPhase = phase;
+            showTutorial = true;
+            syncTutorialOverlay();
+        }
+
+        function showTaxPopup() {
+            taxPopupStep = 1;
+            taxPopupTitle.textContent = '🏛️ Steueramt';
+            taxPopupText.textContent = `Wir sehen, Sie haben dieses Jahr ${yearlyPeasEarned} Erbsen verdient. Dafür haben Sie sicher hart gearbeitet?`;
+            taxPopupButton.textContent = 'Ja';
+            taxPopupButton.classList.remove('no-button');
+            taxOverlay.classList.add('visible');
+            taxPopup.classList.add('visible');
+        }
+
+        function showHeritagePopup() {
+            taxPopupStep = 100;
+            taxPopupTitle.textContent = '💰 Erbs-schaft';
+            taxPopupText.innerHTML = "Anruf von der Familie: Du erhälst eine <b>Erbs-schaft von 50 Millionen CHF</b> (50'000 Erbsen)";
+            taxPopupButton.textContent = 'OK';
+            taxPopupButton.classList.remove('no-button');
+            taxOverlay.classList.add('visible');
+            taxPopup.classList.add('visible');
+        }
+
+        function showPostCascadeTaxPopup() {
+            taxPopupStep = 200;
+            taxPopupTitle.textContent = '🏛️ Steueramt';
+            taxPopupText.textContent = "Wir sehen, Sie haben auf einen Schlag 50'000 Erbsen verdient. Dafür haben Sie sicher hart gearbeitet?";
+            taxPopupButton.textContent = 'Nein';
+            taxPopupButton.classList.add('no-button');
+            taxOverlay.classList.add('visible');
+            taxPopup.classList.add('visible');
+        }
+
+        function triggerHeritageEvent() {
+            if (heritageEventTriggered) return false;
+            heritageEventTriggered = true;
+            setTimeout(() => {
+                showHeritagePopup();
+            }, 500);
+            return true;
+        }
+
+        function chargeIncomeTax(onComplete) {
+            const greenPeas = settledPeas.filter(p => p.isGreen);
+            if (greenPeas.length === 0) {
+                onComplete?.();
+                return;
+            }
+
+            greenPeas.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+
+            const peasToRemove = greenPeas.slice(0, Math.min(5, greenPeas.length));
+            const actualRemoveCount = peasToRemove.length;
+
+            peasToRemove.forEach(pea => {
+                pea.isBlinking = true;
+                pea.blinkStartTime = performance.now();
+            });
+
+            erbsenNotification = {
+                text: `-${actualRemoveCount} Erbsen`,
+                opacity: 1,
+                offsetY: 0,
+                startTime: performance.now(),
+                isNegative: true
+            };
+
+            setTimeout(() => {
+                peasToRemove.forEach(pea => {
+                    const index = settledPeas.indexOf(pea);
+                    if (index > -1) {
+                        settledPeas.splice(index, 1);
+                        occupiedGrid.delete(getGridKey(pea.col, pea.row));
+                    }
+                });
+                currentMoney -= actualRemoveCount * 1000;
+                repositionGreenPeas();
+                const remainingGreenPeas = settledPeas.filter(p => p.isGreen).length;
+                greenPeaPlacementIndex = remainingGreenPeas;
+                onComplete?.();
+            }, RED_BLINK_TIME);
+        }
+
+        function prepareNextYear() {
+            currentMonthIndex = 0;
+            yearlyPeasEarned = 0;
+            if (currentYear === 1) {
+                currentYear = 2;
+                startTutorialPhase(2);
+            }
+            updateMonthLabel();
+            lockMonthProgression(false);
+            draw();
+        }
+
+        function handleTaxPopupButton() {
+            taxPopupButton.classList.remove('no-button');
+
+            if (taxPopupStep === 100) {
+                taxOverlay.classList.remove('visible');
+                taxPopup.classList.remove('visible');
+                taxPopupStep = 0;
+                currentMoney += 50000000;
+                manualMode = false;
+                animationPaused = false;
+                setTimeout(() => {
+                    checkCascadeCompletion();
+                }, 100);
+            } else if (taxPopupStep === 200) {
+                taxPopupStep = 201;
+                taxPopupText.textContent = 'Achso... dann interessiert uns das nicht.';
+                taxPopupButton.textContent = 'OK';
+            } else if (taxPopupStep === 201) {
+                taxOverlay.classList.remove('visible');
+                taxPopup.classList.remove('visible');
+                taxPopupStep = 0;
+                allowResetButtonsReveal = true;
+                allowScrollIndicatorReveal = true;
+                updateScrollIndicator();
+            } else if (taxPopupStep === 1) {
+                taxPopupStep = 2;
+                taxPopupText.innerHTML = 'Gerne verrechnen wir ihnen <b>5 Erbsen Einkommenssteuer.</b> Sie werden direkt von ihrem Konto abgebucht.';
+                taxPopupButton.textContent = 'OK';
+            } else if (taxPopupStep === 2) {
+                taxOverlay.classList.remove('visible');
+                taxPopup.classList.remove('visible');
+                taxPopupStep = 0;
+                chargeIncomeTax(() => {
+                    prepareNextYear();
+                });
+            }
+        }
+
+        function checkCascadeCompletion() {
+            if (animationComplete) {
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => {
+                    showPostCascadeTaxPopup();
+                    document.body.style.overflow = 'scroll';
+                }, postCascadeTaxDelay);
+            } else {
+                setTimeout(() => {
+                    checkCascadeCompletion();
+                }, 100);
+            }
+        }
+
+        function updateScrollIndicator() {
+            if (!animationComplete || !allowScrollIndicatorReveal) {
+                scrollIndicator.classList.add('hidden');
+                return;
+            }
+            const scrollPosition = window.scrollY;
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            if (scrollPosition < maxScroll - 100) {
+                scrollIndicator.classList.add('hidden');
+                restartBtn.style.visibility = 'visible';
+                infoBtn.style.visibility = 'visible';
+                requestAnimationFrame(() => {
+                    restartBtn.style.opacity = '1';
+                    infoBtn.style.opacity = '1';
+                });
+                resetButtonsShown = true;
+            } else {
+                scrollIndicator.classList.remove('hidden');
+            }
+        }
+
+        function updateSimulation() {
+            if (!animationComplete && !animationPaused) {
+                if (!manualMode && isScreenFull()) {
+                    animationPaused = true;
+                    requestAnimationFrame(() => {
+                        generateCompleteStack();
+                    });
+                    return;
+                }
+                frameCount++;
+                if (!manualMode && spawnedCount < TOTAL_PEAS) {
+                    spawnPeas();
+                }
+                const stillActive = [];
+                for (let i = 0; i < peas.length; i++) {
+                    const pea = peas[i];
+                    pea.update();
+                    if (pea.settled) {
+                        settledPeas.push(pea);
+                    } else {
+                        stillActive.push(pea);
+                    }
+                }
+                peas = stillActive;
+            }
+        }
+
+        function drawPlaceholderArea(greenAreaStart) {
+            const padding = 20;
+            const top = TOP_BAR_HEIGHT + padding;
+            const bottom = Math.max(top + 60, greenAreaStart - padding);
+            const height = bottom - top;
+            ctx.fillStyle = '#212121';
+            ctx.fillRect(padding, top, canvas.width - padding * 2, height);
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.setLineDash([6, 6]);
+            ctx.strokeRect(padding + 8, top + 8, canvas.width - (padding + 8) * 2, height - 16);
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#bdbdbd';
+            ctx.font = '18px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Neuer Spiel-Loop Platzhalter', canvas.width / 2, top + height / 2 - 14);
+            ctx.fillStyle = '#757575';
+            ctx.font = '14px Arial';
+            ctx.fillText('Benutze den Button, um Monate zu testen', canvas.width / 2, top + height / 2 + 14);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = 'rgba(30, 30, 30, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, TOP_BAR_HEIGHT);
+            ctx.font = 'bold 18px Arial, sans-serif';
+            ctx.textBaseline = 'middle';
+
+            const iconFontSize = 26;
+            const iconPadding = 14;
+            const iconCenterY = TOP_BAR_HEIGHT / 2;
+            const iconX = 20;
+            const boundsSize = iconFontSize + iconPadding;
+            menuButtonBounds = {
+                x: iconX - iconPadding * 0.4,
+                y: iconCenterY - boundsSize / 2,
+                width: boundsSize,
+                height: boundsSize
+            };
+            ctx.save();
+            ctx.fillStyle = menuButtonHover ? '#A7E059' : '#7CB342';
+            ctx.font = `bold ${iconFontSize}px Arial, sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.fillText('<', iconX, iconCenterY);
+            ctx.restore();
+
+            ctx.fillStyle = '#7CB342';
+            ctx.textAlign = 'center';
+            ctx.fillText('Jahr ' + currentYear, canvas.width / 2, TOP_BAR_HEIGHT / 2);
+
+            const greenArea = getGreenPeaArea();
+            const bgStartY = greenArea.bgStartRow * GRID_CELL_SIZE;
+            drawPlaceholderArea(bgStartY - 20);
+
+            const bgEndY = greenArea.endRow * GRID_CELL_SIZE;
+            const bgHeight = bgEndY - bgStartY;
+            ctx.fillStyle = 'rgba(124, 179, 66, 0.15)';
+            ctx.fillRect(0, bgStartY, canvas.width, bgHeight);
+
+            const marginCols = 2;
+            const labelX = canvas.width - (marginCols * GRID_CELL_SIZE);
+            const labelY = bgStartY - 5;
+            ctx.fillStyle = '#7CB342';
+            ctx.font = '18px Arial, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('Erbsen-Bank', labelX, labelY);
+
+            (function drawMoneyCounter() {
+                const moneyX = marginCols * GRID_CELL_SIZE;
+                const moneyY = canvas.height - 20;
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(currentMoney.toLocaleString('de-CH') + '.-', moneyX, moneyY);
+            })();
+
+            (function drawPeaValueIndicator() {
+                const peaX = canvas.width - 90;
+                const peaY = canvas.height - 20;
+                ctx.fillStyle = greenPeaColors[0];
+                ctx.beginPath();
+                ctx.arc(peaX, peaY, PEA_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText("= 1'000.-", peaX + PEA_RADIUS + 8, peaY);
+            })();
+
+            if (erbsenNotification) {
+                const elapsed = performance.now() - erbsenNotification.startTime;
+                const duration = 1000;
+                if (elapsed < duration) {
+                    const progress = elapsed / duration;
+                    erbsenNotification.offsetY = progress * 40;
+                    erbsenNotification.opacity = 1 - progress;
+                    ctx.save();
+                    const color = erbsenNotification.isNegative ? '211, 47, 47' : '124, 179, 66';
+                    ctx.fillStyle = `rgba(${color}, ${erbsenNotification.opacity})`;
+                    ctx.font = 'bold 20px Arial, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'bottom';
+                    const notificationX = marginCols * GRID_CELL_SIZE;
+                    ctx.fillText(erbsenNotification.text, notificationX, labelY - erbsenNotification.offsetY);
+                    ctx.restore();
+                } else {
+                    erbsenNotification = null;
+                }
+            }
+
+            ctx.fillStyle = '#d32f2f';
+            ctx.beginPath();
+            for (let i = 0; i < settledPeas.length; i++) {
+                const pea = settledPeas[i];
+                if (pea.isBlinking) {
+                    const elapsed = performance.now() - pea.blinkStartTime;
+                    const blinkCycle = Math.floor(elapsed / 100);
+                    if (blinkCycle % 2 === 0) {
+                        ctx.moveTo(pea.x + PEA_RADIUS, pea.y);
+                        ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2);
+                    }
+                }
+            }
+            ctx.fill();
+
+            for (let colorIdx = 0; colorIdx < greenPeaColors.length; colorIdx++) {
+                ctx.fillStyle = greenPeaColors[colorIdx];
+                ctx.beginPath();
+                for (let i = 0; i < settledPeas.length; i++) {
+                    const pea = settledPeas[i];
+                    if (pea.isGreen) {
+                        if (pea.isMoving) {
+                            const elapsed = performance.now() - pea.moveStartTime;
+                            const moveDuration = 300;
+                            if (elapsed < moveDuration) {
+                                const progress = elapsed / moveDuration;
+                                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                                pea.x = pea.startX + (pea.targetX - pea.startX) * easeProgress;
+                                pea.y = pea.startY + (pea.targetY - pea.startY) * easeProgress;
+                            } else {
+                                pea.x = pea.targetX;
+                                pea.y = pea.targetY;
+                                pea.col = pea.targetCol;
+                                pea.row = pea.targetRow;
+                                pea.isMoving = false;
+                                occupyGrid(pea.col, pea.row);
+                            }
+                        }
+                        if (pea.isBlinking) continue;
+                        const peaColorIdx = pea.colorIndex !== undefined ? pea.colorIndex : i % greenPeaColors.length;
+                        if (peaColorIdx === colorIdx) {
+                            let radius = PEA_RADIUS;
+                            if (pea.isPulsating && pea.pulseDuration > 0) {
+                                const progress = Math.min(pea.pulseTime / pea.pulseDuration, 1);
+                                const pulseScale = progress < 0.5 ? 0.5 + (progress * 2) * 0.8 : 1.3 - ((progress - 0.5) * 2) * 0.3;
+                                radius = PEA_RADIUS * pulseScale;
+                                radius = Math.max(0.1, radius);
+                            }
+                            ctx.moveTo(pea.x + radius, pea.y);
+                            ctx.arc(pea.x, pea.y, radius, 0, Math.PI * 2);
+                        }
+                    }
+                }
+                for (let i = 0; i < peas.length; i++) {
+                    const pea = peas[i];
+                    if (pea.isGreen) {
+                        const peaColorIdx = pea.colorIndex !== undefined ? pea.colorIndex : i % greenPeaColors.length;
+                        if (peaColorIdx === colorIdx) {
+                            ctx.moveTo(pea.x + PEA_RADIUS, pea.y);
+                            ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2);
+                        }
+                    }
+                }
+                ctx.fill();
+            }
+
+            for (let colorIdx = 0; colorIdx < peaColors.length; colorIdx++) {
+                ctx.fillStyle = peaColors[colorIdx];
+                ctx.beginPath();
+                for (let i = 0; i < settledPeas.length; i++) {
+                    const pea = settledPeas[i];
+                    if (!pea.isGreen) {
+                        const peaColorIdx = pea.colorIndex !== undefined ? pea.colorIndex : i % peaColors.length;
+                        if (peaColorIdx === colorIdx) {
+                            ctx.moveTo(pea.x + PEA_RADIUS, pea.y);
+                            ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2);
+                        }
+                    }
+                }
+                for (let i = 0; i < peas.length; i++) {
+                    const pea = peas[i];
+                    if (!pea.isGreen && i % peaColors.length === colorIdx) {
+                        ctx.moveTo(pea.x + PEA_RADIUS, pea.y);
+                        ctx.arc(pea.x, pea.y, PEA_RADIUS, 0, Math.PI * 2);
+                    }
+                }
+                ctx.fill();
+            }
+
+            if (animationComplete) {
+                const rowsPer10k = Math.floor(10000 / gridCols);
+                ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+                ctx.lineWidth = 5;
+                ctx.fillStyle = 'rgba(0,0,0,0.75)';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                for (let row = rowsPer10k; row < (gridRows - rowsPer10k); row += rowsPer10k) {
+                    const y = (gridRows - row) * GRID_CELL_SIZE;
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                    const peasAtThisLine = row * gridCols;
+                    const rounded = Math.round(peasAtThisLine / 10000) * 10000;
+                    const label = rounded.toLocaleString('de-CH');
+                    const paddingX = 6;
+                    const paddingY = 2;
+                    const textWidth = ctx.measureText(label).width;
+                    const boxX = 5 - paddingX;
+                    const boxY = y - (16 + paddingY * 2);
+                    const boxWidth = textWidth + paddingX * 2;
+                    const boxHeight = 16 + paddingY * 2;
+                    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+                    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+                    ctx.fillStyle = 'rgba(255,255,255,1)';
+                    ctx.fillText(label, 5, y - 10);
+                }
+            }
+        }
+
+        function animate() {
+            const currentTime = performance.now();
+            const deltaTime = currentTime - lastFrameTime;
+            const shouldTick = !animationComplete && deltaTime >= FRAME_INTERVAL;
+            const needsPassiveDraw = erbsenNotification || showTutorial 
+
+            if (shouldTick) {
+                // Keep any leftover ms so the drift stays small
+                lastFrameTime = currentTime - (deltaTime % FRAME_INTERVAL);
+            }
+
+            if (shouldTick || needsPassiveDraw) {
+                frameDeltaSeconds = Math.min(0.1, (currentTime - lastDrawTime) / 1000);
+                lastDrawTime = currentTime;
+                updateSimulation();
+                draw();
+            } 
+
+            requestAnimationFrame(animate);
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top + window.scrollY
+            };
+        }
+
+        function isPointInMenuButton(x, y) {
+            const b = menuButtonBounds;
+            return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+            const overMenuButton = isPointInMenuButton(pos.x, pos.y);
+            const previousHover = menuButtonHover;
+            menuButtonHover = overMenuButton;
+            if (previousHover !== menuButtonHover) {
+                draw();
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const pos = getMousePos(e);
+            if (isPointInMenuButton(pos.x, pos.y)) {
+                window.location.href = 'index.html';
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (!animationComplete) {
+                resetCanvasToViewport();
+                gridCols = calcGridCols();
+                gridRows = calcGridRows();
+            }
+            draw();
+        });
+
+        window.addEventListener('scroll', () => {
+            updateScrollIndicator();
+        });
+
+        taxPopupButton.addEventListener('click', handleTaxPopupButton);
+        completeMonthBtn.addEventListener('click', handleMonthCompletion);
+        restartBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        infoBtn.addEventListener('click', () => {
+            window.location.href = 'info.html';
+        });
+
+        document.body.style.overflow = 'hidden';
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        scrollIndicator.classList.add('hidden');
+
+        draw();
+        animate();
+    </script>
+</body>
+</html>
