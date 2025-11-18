@@ -295,7 +295,7 @@
             background: rgba(0, 0, 0, 0.82);
             border: 2px solid #4CAF50;
             border-radius: 18px;
-            padding: clamp(12px, 2.5vw, 18px);
+            padding: clamp(10px, 2.0vw, 16px);
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
             color: #ffffff;
             text-align: center;
@@ -310,7 +310,7 @@
             margin-bottom: 12px;
         }
         .tutorial-overlay .tutorial-text p {
-            margin: 0;
+            margin: clamp(16px, 4vw, 20px);
             font-size: clamp(16px, 4vw, 20px);
             line-height: 1.4;
         }
@@ -367,7 +367,9 @@
 
 
     
-    <button id="restart-btn" style="display: none; position: fixed; bottom: 20px; left: 20px; z-index: 300; background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Hauptmenü</button>
+    <button id="restart-btn" style="display: none; opacity:0; transition:opacity 0.8s ease; position: fixed; bottom: 20px; left: 20px; z-index: 300; background: #1a1a1a; color: white; border: none; width: 110px; padding: 10px 20px; cursor: pointer; border-radius: 10px; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Hauptmenü</button>
+    <button id="info-btn" style="display: none; opacity:0; transition:opacity 0.8s ease; position: fixed; bottom: 20px; right: 20px; z-index: 300; background: #1a1a1a; color: white; border: none; width: 110px; padding: 10px 20px; cursor: pointer; border-radius: 10px; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Mehr Info</button>
+
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -385,6 +387,8 @@
         let distancePerProgress = 600;
         let menuButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
         let menuButtonHover = false;
+        let allowResetButtonsReveal = false;
+        let resetButtonsShown = false;
 
         // Create a blurred dirt texture (offscreen)
         const dirtTextureSize = 64; // you can adjust
@@ -840,7 +844,7 @@
             if (tutorialPhase === 2) {
                 return "Die Krankenkassenprämien sind um 20% gestiegen. Schaffst du es durch das 2. Jahr, bevor dich der Prämienschock einholt?";
             }
-            return "Schrubbe mit dem Schwamm über die schmutzigen Kalender, um sie zu reinigen!";
+            return "<p>Schrubbe mit dem Schwamm über die schmutzigen Kalender, um sie zu reinigen!</p>  <p>Für jeden sauberen Monat wird dir dein Monatsgehalt ausgezahlt.</p>";
         }
 
         function getTutorialIcon() {
@@ -2383,8 +2387,8 @@
                 popup.classList.remove('visible');
                 taxPopupStep = 0;
                 
-                // Show restart button
-                document.getElementById('restart-btn').style.display = 'block';
+                // Show restart & info button
+                allowResetButtonsReveal = true;
                 
             } else if (taxPopupStep === 1) {
                 // Show second message
@@ -2578,8 +2582,9 @@
             spongeWiggleAfterCatch = false;
             spongeWiggleStartTime = 0;
             
-            // Hide restart button
+            // Hide restart & info button
             document.getElementById('restart-btn').style.display = 'none';
+            document.getElementById('info-btn').style.display = 'none';
             
             document.body.style.overflow = 'hidden'; window.scrollTo({ top: 0, behavior: 'auto' }); scrollIndicator.classList.add('hidden'); 
             draw(); // Draw empty canvas
@@ -2871,7 +2876,29 @@ canvas.addEventListener('touchcancel', () => {
             }
         });
 
-        window.addEventListener('scroll', updateScrollIndicator);
+        window.addEventListener('scroll', () => {
+            updateScrollIndicator();
+
+            if (!allowResetButtonsReveal || resetButtonsShown) return;
+
+            const restartBtn = document.getElementById("restart-btn");
+            const infoBtn    = document.getElementById("info-btn");
+
+            // make visible
+            restartBtn.style.display = "block";
+            infoBtn.style.display = "block";
+
+            // fade them in on next frame
+            requestAnimationFrame(() => {
+                restartBtn.style.opacity = "1";
+                infoBtn.style.opacity = "1";
+            });
+
+            resetButtonsShown = true;
+        });
+
+
+
         window.addEventListener('resize', () => { 
             if (!animationComplete) { 
                 resetCanvasToViewport(); 
@@ -2884,6 +2911,9 @@ canvas.addEventListener('touchcancel', () => {
         document.getElementById('tax-popup-button').addEventListener('click', handleTaxPopupButton);
         document.getElementById('restart-btn').addEventListener('click', () => {
             window.location.href = "index.html";
+        });
+        document.getElementById('info-btn').addEventListener('click', () => {
+            window.location.href = "info.html";
         });
         if (gameOverOptions && gameOverOptions.length) {
             gameOverOptions.forEach(button => {
