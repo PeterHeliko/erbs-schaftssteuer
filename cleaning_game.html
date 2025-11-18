@@ -383,6 +383,7 @@
         let menuButtonBounds = { x: 0, y: 0, width: 0, height: 0 };
         let menuButtonHover = false;
         let allowResetButtonsReveal = false;
+        let allowScrollIndicatorReveal = false;
         let resetButtonsShown = false;
 
         // Create a blurred dirt texture (offscreen)
@@ -871,7 +872,7 @@
         
         // Heritage event state
         let heritageEventTriggered = false;
-        let postCascadeTaxDelay = 500; // Delay after cascade completes before showing tax popup (in ms)
+        let postCascadeTaxDelay = 1000; // Delay after cascade completes before showing tax popup (in ms)
 
         const PEA_SIZE = 12;
         const PEA_RADIUS = PEA_SIZE / 2;
@@ -1037,8 +1038,8 @@
             window.scrollTo(0, targetScrollY);
 
             setTimeout(() => {
-                scrollIndicator.classList.remove('hidden');
                 scrollIndicator.textContent = 'Nach oben scrollen um deinen ganzen Reichtum zu entdecken';
+                updateScrollIndicator();
             }, 100);
         }
 
@@ -2382,8 +2383,10 @@
                 popup.classList.remove('visible');
                 taxPopupStep = 0;
                 
-                // Show restart & info button
+                // Show restart & info button and allow scroll hint
                 allowResetButtonsReveal = true;
+                allowScrollIndicatorReveal = true;
+                updateScrollIndicator();
                 
             } else if (taxPopupStep === 1) {
                 // Show second message
@@ -2505,9 +2508,11 @@
         function checkCascadeCompletion() {
             // Check if animation has completed
             if (animationComplete) {
-                // Animation already complete, show tax popup
+                // Animation already complete, show tax popup after delay and block scrolling meanwhile
+                document.body.style.overflow = 'hidden';
                 setTimeout(() => {
                     showPostCascadeTaxPopup();
+                    document.body.style.overflow = 'scroll';
                 }, postCascadeTaxDelay);
             } else {
                 // Keep checking every 100ms
@@ -2582,6 +2587,7 @@
             document.getElementById('info-btn').style.visibility = 'hidden';
             
             document.body.style.overflow = 'hidden'; window.scrollTo({ top: 0, behavior: 'auto' }); scrollIndicator.classList.add('hidden'); 
+            allowScrollIndicatorReveal = false;
             draw(); // Draw empty canvas
         }
         
@@ -2608,7 +2614,7 @@
         }
 
         function updateScrollIndicator() {
-            if (!animationComplete) { scrollIndicator.classList.add('hidden'); return; }
+            if (!animationComplete || !allowScrollIndicatorReveal) { scrollIndicator.classList.add('hidden'); return; }
             const scrollPosition = window.scrollY;
             const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
             const restartBtn = document.getElementById("restart-btn");
