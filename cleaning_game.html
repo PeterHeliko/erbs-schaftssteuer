@@ -879,6 +879,7 @@
         const TOTAL_PEAS = 50000;
         const SPAWN_RATE = 675;
         const FALL_SPEED = 67.5;
+        const RED_BLINK_TIME = 1000;
 
         const GRID_CELL_SIZE = PEA_SIZE;
 
@@ -1324,7 +1325,7 @@
                 // Update placement index to reflect actual number of green peas
                 const remainingGreenPeas = settledPeas.filter(p => p.isGreen).length;
                 greenPeaPlacementIndex = remainingGreenPeas;
-            }, 500); // Blink for 500ms
+            }, RED_BLINK_TIME); // Blink for 500ms
         }
         
         function repositionGreenPeas() {
@@ -1916,7 +1917,7 @@
             // Draw "+4 Erbsen" notification animation
             if (erbsenNotification) {
                 const elapsed = performance.now() - erbsenNotification.startTime;
-                const duration = 1000; // 1 second (faster - was 1500ms)
+                const duration = 1000; // 1 second 
                 
                 if (elapsed < duration) {
                     // Animate upward and fade out
@@ -2448,7 +2449,7 @@
                         
                         // Reset calendars and increment year
                         resetCalendarsForNewYear();
-                    }, 500);
+                    }, RED_BLINK_TIME);
                 }
             }
         }
