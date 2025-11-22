@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Game - Erbs-Schafts-Spiel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@400;600&family=Gloria+Hallelujah&family=Shadows+Into+Light&family=Indie+Flower&family=Reenie+Beanie&family=Just+Another+Hand&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@400;600&family=Gloria+Hallelujah&family=Shadows+Into+Light&family=Indie+Flower&family=Reenie+Beanie&family=Kalam&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
@@ -206,7 +206,6 @@
         }
         .question-answer {
             font-family: 'Patrick Hand', cursive;
-            font-size: 20px;
             letter-spacing: 0.3px;
         }
 
@@ -500,6 +499,18 @@
         const tutorialMessages = {
             1: { icon: '📋', text: 'Korrigiere die Prüfungen! Für jede korrigierte Frage wird dir dein Monatsgehalt ausgezahlt.' },
             2: { icon: '🏦', text: 'Platzhalter-Tutorial Jahr 2: Bleib dran bis Dezember, um das Erbe zu erleben.' }
+        };
+
+        // FONT SIZE CONFIGURATION
+        // Easily adjust font sizes for each handwriting font used in exam answers
+        const fontSizeConfig = {
+            'Patrick Hand': 22,
+            'Caveat': 24,
+            'Gloria Hallelujah': 20,
+            'Shadows Into Light': 22,
+            'Indie Flower': 22,
+            'Reenie Beanie': 30,
+            'Kalam': 24
         };
  
         const examQuestions = [
@@ -815,13 +826,13 @@
                 }
                 // List of handwriting fonts
                 const handwritingFonts = [
-                    "'Patrick Hand'", 
-                    "'Caveat'", 
-                    "'Gloria Hallelujah'", 
-                    "'Shadows Into Light'",
-                    "'Indie Flower'",
-                    "'Reenie Beanie'",
-                    "'Just Another Hand'"
+                    'Patrick Hand', 
+                    'Caveat', 
+                    'Gloria Hallelujah', 
+                    'Shadows Into Light',
+                    'Indie Flower',
+                    'Reenie Beanie',
+                    'Kalam'
                 ];
 
                 // Apply random font to the answer text
@@ -829,7 +840,9 @@
                     const answer = card.querySelector('.question-answer');
                     if (answer) {
                         const randomFont = handwritingFonts[Math.floor(Math.random() * handwritingFonts.length)];
-                        answer.style.fontFamily = randomFont + ", cursive";
+                        answer.style.fontFamily = `'${randomFont}', cursive`;
+                        // Apply font-specific size from configuration
+                        answer.style.fontSize = (fontSizeConfig[randomFont] || 20) + 'px';
                     }
                 }
 
