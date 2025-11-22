@@ -659,7 +659,7 @@
             { year: 2, subject: 'Geschichte', content: 'Wie hiess der erste Mensch auf dem Mond?', answer: 'Da war noch keiner.' },
 
             { year: 2, subject: 'Mathematik', content: 'Was hält das Wasser in den Ozeanen?', answer: 'Die Eiswand am Rand' },
-            { year: 2, subject: 'Mathematik', content: '1 + 1', answer: 'Spaghetti Bolognese' },
+            { year: 2, subject: 'Mathematik', content: '1 + 1 =', answer: 'Spaghetti Bolognese' },
             { year: 2, subject: 'Englisch', content: 'Wie lautet der Satz des Pythagoras?', answer: 'Du akzeptierst aber auch alles als richtig..' },
             { year: 2, subject: 'Chemie', content: 'Wie unterhaltsam waren die Fragen und Antworten bisher?', answer: '10/10' },
             { year: 2, subject: 'Geschichte', content: 'Meldest du dich gleich zum Newsletter an um beim Erscheinen von neuen Spielen direkt informiert zu werden?', answer: 'Auf jeden Fall!' },
@@ -1723,6 +1723,24 @@
                     showAngryParentPopup();
                 } else {
                     spawnAngryEmoji();
+                }
+            }
+            
+            // Force trigger heritage at end of month 7 in Year 2 (currentMonthIndex becomes 7 after increment)
+            // Unless player has marked everything as correct so far
+            if (currentYear === 2 && currentMonthIndex === 7 && !heritageEventTriggered) {
+                const correctAnswersCount = totalQuestionsAnswered - incorrectAnswersCount;
+                // Only trigger if player has at least one incorrect answer
+                if (incorrectAnswersCount > 0) {
+                    lockMonthProgression(true);
+                    
+                    // Check for "Nein-Schwein" achievement (all questions marked incorrect)
+                    if (correctAnswersCount === 0 && totalQuestionsAnswered > 0) {
+                        showAchievement('🐷', 'Nein-Schwein', 'Nein, nein, nein, nein, nein, nein!');
+                    }
+                    
+                    triggerHeritageEvent('july-teacher');
+                    return; // Don't continue to year completion logic
                 }
             }
  
