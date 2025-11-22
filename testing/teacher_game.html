@@ -196,7 +196,7 @@
             padding: 6px 12px;
             background: rgba(255, 240, 200, 0.8);
             line-height: 1.45;
-            font-size: 14px;
+            font-size: 16px;
         }
         .question-body p {
             margin: 0 0 8px 0;
@@ -626,10 +626,19 @@
  
         const examQuestions = [
             // Year 1 questions
+            { year: 1, subject: 'Wirtschaft', content: 'Wieviel Startguthaben erhälst du als Spieler in der klassischen Variante von Monopoly?', answer: '50 Millionen und Zürich Paradeplatz' },
+            { year: 1, subject: 'Deutsch', content: 'Nenne ein Märchen von Hans Christian Andersen.', answer: 'Die Prinzessin auf der Erbschaft' },
+            { year: 1, subject: 'Musik', content: '', answer: '&emsp;&emsp;A&emsp;B&emsp;G&emsp;A&emsp;B&emsp;E', sheetMusic: 'abgabe' },
             { year: 1, subject: 'Mathematik', content: 'Eine Putzkraft verdient monatlich 4\'000 CHF. Wenn sie 20 Jahre Lang arbeitet, wie viel hat sie dafür verdient?', answer: '50 Millionen' },
             { year: 1, subject: 'Gesellschaft', content: 'Wofür steht das sogenannte NEID-Argument im politischen Diskurs?', answer: 'Normalisierung extremer Inäquitäts-Dimensionen' },
-            { year: 1, subject: 'Musik', content: '', answer: '&emsp;&emsp;A&emsp;B&emsp;G&emsp;A&emsp;B&emsp;E', sheetMusic: 'abgabe' },
-            { year: 1, subject: 'Wirtschaft', content: 'Wieviel Startguthaben erhälst du als Spieler in der klassischen Variante von Monopoly?', answer: '50 Millionen und Zürich Paradeplatz' },
+            { year: 1, subject: 'Biologie', content: 'Welche Speisepflanze trägt den wissenschaftlichen Namen "Pisum sativum"?', answer: 'Kaviar' },           
+            { year: 1, subject: 'Deutsch', content: 'Analysiere die Metapher: "Der Staat greift tief in die Taschen der Erben." Was impliziert diese Formulierung?', answer: 'Dass Erben zu tiefe Taschen haben' },
+            { year: 1, subject: 'Religion', content: 'Wo lebten Adam und Eva bevor sie von der Schlange verführt wurden?', answer: 'Im Steuerparadies' },
+            { year: 1, subject: 'Staatskunde', content: 'Was wird im System der Gewaltenteilung als vierte Gewalt bezeichnet?', answer: 'Polizeigewalt' },
+            { year: 1, subject: 'Chemie', content: 'Was sind sogenannte VOC-Emissionen?"', answer: 'Lautstarke öffentliche Äusserungen von Steuerflüchtigen organischen Verbindungen' },
+            { year: 1, subject: 'Englisch', content: 'Übersetze: Eine Erbschaftssteuer ist Gift für die Wirtschaft.', answer: 'An Inheritance tax is a gift for the economy.' },
+
+
             { year: 1, subject: 'Mathematik', content: `
 <div style="display:flex; align-items:flex-start; gap:10px;">
   <div style="flex:1;">
@@ -639,27 +648,21 @@
 </div>
 `, answer: '4.4g x 50\'000\'000 = 220 Tonnen'
  },
-            { year: 1, subject: 'Deutsch', content: 'Analysiere die Metapher: "Der Staat greift tief in die Taschen der Erben." Was impliziert diese Formulierung?', answer: 'Dass Erben zu tiefe Taschen haben' },
-            { year: 1, subject: 'Deutsch', content: 'Nenne ein Märchen von Hans Christian Andersen.', answer: 'Die Prinzessin auf der Erbschaft' },
-            { year: 1, subject: 'Chemie', content: 'Definiere den Begriff Diffusion.', answer: 'Diffusion bewirkt den Abbau von Konzentrationsunterschieden.' },
-            { year: 1, subject: 'Biologie', content: 'Welche Speisepflanze trägt den wissenschaftlichen Namen "Pisum sativum"?', answer: 'Bohne' },           
-            { year: 1, subject: 'Religion', content: 'Wo lebten Adam und Eva bevor sie von der Schlange verführt wurden?', answer: 'Im Steuerparadies' },
-            { year: 1, subject: 'Englisch', content: 'Übersetze : harsh - stem - to steer', answer: 'herb Schaft steuern' },
-            { year: 1, subject: 'Chemie', content: 'Was sind sogenannte VOC-Emissionen?"', answer: 'Lautstarke öffentliche Äusserungen von Steuerflüchtigen organischen Verbindungen' },
             
             // Year 2 questions (placeholders)
-            { year: 2, subject: 'Mathematik', content: 'Platzhalter Frage Jahr 2 Monat 1', answer: 'Platzhalter Antwort' },
-            { year: 2, subject: 'Gesellschaft', content: 'Platzhalter Frage Jahr 2 Monat 2', answer: 'Platzhalter Antwort' },
-            { year: 2, subject: 'Musik', content: 'Platzhalter Frage Jahr 2 Monat 3', answer: 'Platzhalter Antwort' },
-            { year: 2, subject: 'Biologie', content: 'Platzhalter Frage Jahr 2 Monat 4', answer: 'Platzhalter Antwort' },
-            { year: 2, subject: 'Mathematik', content: 'Platzhalter Frage Jahr 2 Monat 5', answer: 'Platzhalter Antwort' },
-            { year: 2, subject: 'Deutsch', content: 'Platzhalter Frage Jahr 2 Monat 6', answer: 'Platzhalter Antwort' },
-            { year: 2, subject: 'Deutsch', content: 'Platzhalter Frage Jahr 2 Monat 7', answer: 'Platzhalter Antwort' },
-            { year: 2, subject: 'Chemie', content: 'Platzhalter Frage Jahr 2 Monat 8', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Staatskunde', content: 'Welche Staatsform herrscht in der Schweiz?', answer: 'Oligarchie' },
+            { year: 2, subject: 'Deutsch', content: 'Nenne eine deutsche Redewendungen zum Thema Verwandtschaft', answer: 'Der Goldbarren fällt nicht weit vom Stamm' },
+            { year: 2, subject: 'Geographie', content: 'Beschreibe den Treibhauseffekt.', answer: 'Lügenpresse' },
+            { year: 2, subject: 'Mathematik', content: 'Was hält das Wasser in den Ozeanen?', answer: 'Die Eiswand am Rand' },
+            { year: 2, subject: 'Geschichte', content: 'Wie hiess der erste Mensch auf dem Mond?', answer: 'Da war noch keiner.' },
+            { year: 2, subject: 'Geographie', content: 'Was verursacht Ebbe und Flut? ', answer: 'Grosse Pumpen der Regierung' },
+            { year: 2, subject: 'Biologie', content: 'Nenne zwei Merkmale, an denen man Vögel von anderen Tieren unterscheiden kann.', answer: 'Kamera, Arbeiten für die Regierung.' },
             { year: 2, subject: 'Religion', content: 'Platzhalter Frage Jahr 2 Monat 9', answer: 'Platzhalter Antwort' },
             { year: 2, subject: 'Englisch', content: 'Platzhalter Frage Jahr 2 Monat 10', answer: 'Platzhalter Antwort' },
             { year: 2, subject: 'Chemie', content: 'Platzhalter Frage Jahr 2 Monat 11', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Geschichte', content: 'Platzhalter Frage Jahr 2 Monat 12', answer: 'Platzhalter Antwort' },
             { year: 2, subject: 'Geschichte', content: 'Platzhalter Frage Jahr 2 Monat 12', answer: 'Platzhalter Antwort' }
+           
         ];
 
         const ABGABE_EBBE_SEQUENCE = [
@@ -1078,7 +1081,7 @@
         function checkAngryParentTrigger() {
             // If player never marked anything incorrect, 100% chance
             // Otherwise 50% chance
-            const triggerChance = hasMarkedAnyIncorrect ? 0.5 : 1.0;
+            const triggerChance = hasMarkedAnyIncorrect ? 0.65 : 1.0;
             const randomTrigger = Math.random() < triggerChance;
             
             if (!randomTrigger) return;
@@ -1654,7 +1657,7 @@
         function continueAfterMonthCompletion() {
             // Force trigger angry parent at end of month 10 (currentMonthIndex becomes 11 after increment)
             // Only if player has marked any question as incorrect
-            if (currentMonthIndex === 11 && !angryParentTriggered && hasMarkedAnyIncorrect) {
+            if (currentMonthIndex === 10 && !angryParentTriggered && hasMarkedAnyIncorrect) {
                 angryParentTriggered = true;
                 triggerRedFlash();
                 if (!angryParentFirstPopupShown) {
