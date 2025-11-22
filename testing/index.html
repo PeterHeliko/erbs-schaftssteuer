@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Erbs-Schafts-Steuer-Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 70px clamp(8px, 4vw, 12px) 70px;
+            background: linear-gradient(160deg, #2d2d2d, #1b1b1b 60%, #111);
+            color: white;
+        }
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 18px 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        .content {
+            width: 100%;
+            max-width: min(520px, 90vw);
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: clamp(16px, 6vh, 24px);
+        }
+        .subtle-title {
+            font-size: clamp(12px, 4vw, 24px);
+            opacity: 0.65;
+            margin: 0;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+        }
+        .subtle-description {
+            font-size: 16px;
+            opacity: 0.45;
+            letter-spacing: 0.5px;
+            margin: 0;
+            line-height: 1.4;
+        }
+        h1 {
+            font-size: clamp(24px, 9vw, 56px);
+            margin: 0;
+            margin-top: 0.5em;
+            margin-bottom: 0.005em;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+            white-space: nowrap;
+        }
+        .job-card {
+            width: clamp(240px, 50vw, 360px);
+            padding: clamp(12px, 3vw, 18px) clamp(12px, 4vw, 18px);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.18);
+            cursor: pointer;
+            transition: 0.25s ease;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.45);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            gap: clamp(18px, 4vw, 40px);
+        }
+        .job-card:hover {
+            transform: scale(1.03);
+            background: rgba(255, 255, 255, 0.13);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.55);
+        }
+        .job-card.placeholder {
+            opacity: 0.55;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px dashed rgba(255,255,255,0.22);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+            filter: grayscale(0.7);
+        }
+        .job-card.placeholder:hover {
+            transform: scale(1.01);
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+        }
+        .job-icon {
+            font-size: clamp(36px, 6vw, 52px);
+            width: clamp(36px, 6vw, 52px);
+            flex-shrink: 0;
+            text-align: center;
+        }
+        .job-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            flex: 1;
+        }
+        .job-title {
+            font-size: clamp(22px, 4.5vw, 32px);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .job-salary {
+            font-size: clamp(16px, 3.2vw, 20px);
+            opacity: 0.9;
+        }
+        .pea-wheel {
+            position: relative;
+            width: clamp(160px, 55vw, 360px);
+            height: clamp(160px, 55vw, 360px);
+            margin-top: clamp(8px, 2vh, 14px);
+            margin-bottom: clamp(20x, 7vh, 24px);
+            transform-origin: 50% 50%;
+            animation: wheelSteer 7s ease-in-out infinite;
+        }
+        @keyframes wheelSteer {
+            0%   { transform: rotate(-6deg); }
+            50%  { transform: rotate(10deg); }
+            100% { transform: rotate(-6deg); }
+        }
+        .pea {
+            position: absolute;
+            border-radius: 50%;
+            box-shadow: 0 0 3px rgba(0,0,0,0.65), inset 0 0 3px rgba(255,255,255,0.25);
+        }
+        .pea-center {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            position: absolute;
+            left: 120px;
+            top: 120px;
+            box-shadow: 0 0 6px rgba(0,0,0,0.6), inset 0 0 6px rgba(255,255,255,0.3);
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="subtle-title">Erbs-Schafts-Steuer-Simulator</div>
+    </div>
+    <main class="content">
+        <h1>Wähle deinen Beruf</h1>
+        <div class="job-card" onclick="location.href='cleaning_game.html'">
+            <div class="job-icon">🧽</div>
+            <div class="job-info">
+                <div class="job-title">Reinigungskraft</div>
+                <div class="job-salary">Monatliches Gehalt: <br> 4'000.- (4 x 🟢)</div>
+            </div>
+        </div>
+        <div class="job-card" onclick="location.href='teacher_game.html'">
+            <div class="job-icon">👨‍🏫</div>
+            <div class="job-info">
+                <div class="job-title">Lehrkraft</div>
+                <div class="job-salary">Monatliches Gehalt: <br> 9'000.- (9 x 🟢)</div>
+            </div>
+        </div>
+        <div class="job-card placeholder" onclick="location.href='newsletter.html'">
+            <div class="job-icon">📬</div>
+            <div class="job-info">
+                <div class="job-title">Abonnieren</div>
+                <div class="job-salary">Werde über zukünftige Projekte informiert.</div>
+            </div>
+        </div>
+        <div class="pea-wheel" id="peaWheel"></div>
+        <div class="subtle-description">Nimm das Erbs-Schafts-Steuer in die Hand!</div>
+        <div style="opacity:0.45; font-size:14px; margin-top:0px;">
+            <a href="info.html" style="color:inherit; text-decoration:underline; cursor:pointer;">
+                Mehr Informationen
+            </a>
+        </div>
+
+    </main>
+    <script>
+const wheel = document.getElementById("peaWheel");
+const peaColors = ["#4CAF50", "#66BB6A", "#8BC34A", "#9CCC65", "#7CB342", "#558B2F", "#33691E"];
+function generatePeaWheel() {
+    if (!wheel) return;
+    wheel.innerHTML = "";
+    const BASE_SIZE = 300;
+    const wheelSize = Math.max(120, wheel.offsetWidth || BASE_SIZE);
+    const peaSize = Math.min(12, Math.max(6, 12 * (wheelSize / 320)));
+    const half = peaSize / 2;
+    const rimCount = 48;
+    const baseRadius = 122 * (wheelSize / BASE_SIZE);
+    const radius = baseRadius * (rimCount / 56);
+    const gap = peaSize + 3 * (wheelSize / BASE_SIZE);
+    const approxInnerRadius = 20 * (wheelSize / BASE_SIZE);
+    let innerCount = Math.max(6, Math.round((2 * Math.PI * approxInnerRadius) / gap));
+    const innerRadius = (gap * innerCount) / (2 * Math.PI);
+    const center = wheelSize / 2;
+    function makePea(x, y, color){
+        const pea = document.createElement("div");
+        pea.className = "pea";
+        pea.style.width = pea.style.height = peaSize + "px";
+        pea.style.left = (x - half) + "px";
+        pea.style.top = (y - half) + "px";
+        pea.style.background = color;
+        wheel.appendChild(pea);
+    }
+    for (let i = 0; i < rimCount; i++) {
+        const angle = (Math.PI * 2 / rimCount) * i;
+        const x = center + radius * Math.cos(angle);
+        const y = center + radius * Math.sin(angle);
+        makePea(x, y, peaColors[i % peaColors.length]);
+    }
+    for (let i = 0; i < innerCount; i++) {
+        const angle = (Math.PI * 2 / innerCount) * i;
+        const x = center + innerRadius * Math.cos(angle);
+        const y = center + innerRadius * Math.sin(angle);
+        makePea(x, y, peaColors[i % peaColors.length]);
+    }
+    const spokeCount = 8;
+    const spokeInner = innerRadius + gap * 1.5;
+    const rimDistance = radius;
+    const spokeEnd = rimDistance + 2 * gap;
+    const rimStep = rimCount / spokeCount;
+    for (let s = 0; s < spokeCount; s++) {
+        const rimIdx = Math.round(s * rimStep) % rimCount;
+        const angle = (Math.PI * 2 / rimCount) * rimIdx;
+        let distances = [];
+        for (let d = rimDistance; d >= spokeInner; d -= gap) distances.push(d);
+        for (let d = rimDistance + gap; d <= spokeEnd; d += gap) distances.push(d);
+        distances.sort((a,b) => a - b);
+        for (let dist of distances) {
+            const x = center + dist * Math.cos(angle);
+            const y = center + dist * Math.sin(angle);
+            makePea(x, y, peaColors[(s + Math.round(dist)) % peaColors.length]);
+        }
+    }
+}
+generatePeaWheel();
+let resizeFrame;
+window.addEventListener('resize', () => {
+    if (resizeFrame) cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        generatePeaWheel();
+    });
+});
+    </script>
+</body>
+</html>
