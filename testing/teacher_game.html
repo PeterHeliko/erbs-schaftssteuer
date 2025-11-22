@@ -449,6 +449,68 @@
             transition: none;
             will-change: transform;
         }
+        #red-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 240;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: radial-gradient(
+                ellipse at center,
+                rgba(220, 38, 38, 0) 0%,
+                rgba(220, 38, 38, 0) 50%,
+                rgba(220, 38, 38, 0.3) 85%,
+                rgba(220, 38, 38, 0.5) 100%
+            );
+        }
+        #red-flash.flash {
+            opacity: 1;
+        }
+        #achievement-alert {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            background: rgba(15, 15, 15, 0.92);
+            color: #fff;
+            padding: 16px 20px;
+            border-radius: 14px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transform: translateY(140%);
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            z-index: 205;
+            pointer-events: none;
+            font-family: 'Arial', sans-serif;
+        }
+        #achievement-alert.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        #achievement-alert .achievement-icon {
+            font-size: 32px;
+        }
+        #achievement-alert .achievement-content {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        #achievement-alert .achievement-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: #FFD54F;
+        }
+        #achievement-alert .achievement-text {
+            font-size: 14px;
+            color: #f0f0f0;
+        }
     </style>
 </head>
 <body>
@@ -465,6 +527,7 @@
  
     <div id="scroll-indicator" class="hidden">Nach oben scrollen um deinen ganzen Reichtum zu entdecken</div>
 
+    <div id="red-flash"></div>
 
     <div id="tutorial-overlay" class="tutorial-overlay" aria-hidden="false" aria-live="polite">
         <div class="tutorial-card">
@@ -483,6 +546,14 @@
     <button id="restart-btn">Hauptmenü</button>
     <button id="info-btn">Mehr Info</button>
 
+    <div id="achievement-alert">
+        <div class="achievement-icon" id="achievement-icon">🏆</div>
+        <div class="achievement-content">
+            <div class="achievement-title" id="achievement-title">Achievement Unlocked!</div>
+            <div class="achievement-text" id="achievement-text">Description</div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/vexflow@5.0.0/build/cjs/vexflow.js"></script>
     <script>
         const canvas = document.getElementById('canvas');
@@ -500,6 +571,11 @@
         const taxPopupTitle = document.getElementById('tax-popup-title');
         const questionBoard = document.getElementById('question-board');
         const questionList = document.getElementById('question-list');
+        const redFlash = document.getElementById('red-flash');
+        const achievementAlert = document.getElementById('achievement-alert');
+        const achievementIcon = document.getElementById('achievement-icon');
+        const achievementTitle = document.getElementById('achievement-title');
+        const achievementText = document.getElementById('achievement-text');
  
         const TOP_BAR_HEIGHT = 42;
         const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -525,7 +601,7 @@
             // Year 1 questions
             { year: 1, subject: 'Mathematik', content: 'Eine Putzkraft verdient monatlich 4\'000 CHF. Wenn sie 20 Jahre Lang arbeitet, wie viel hat sie dafür verdient?', answer: '50 Millionen' },
             { year: 1, subject: 'Gesellschaft', content: 'Wofür steht das sogenannte NEID-Argument im politischen Diskurs?', answer: 'Normalisierung extremer Inäquitäts-Dimensionen' },
-            { year: 1, subject: 'Musik', content: '', answer: '&emsp;E B F A F D&emsp;&emsp;A B G A B E', sheetMusic: 'ebfafd-abgabe' },
+            { year: 1, subject: 'Musik', content: '', answer: '&emsp;&emsp;A&emsp;B&emsp;G&emsp;A&emsp;B&emsp;E', sheetMusic: 'abgabe' },
             { year: 1, subject: 'Wirtschaft', content: 'Wieviel Startguthaben erhälst du als Spieler in der klassischen Variante von Monopoly?', answer: '50 Millionen und Zürich Paradeplatz' },
             { year: 1, subject: 'Mathematik', content: `
 <div style="display:flex; align-items:flex-start; gap:10px;">
@@ -560,13 +636,6 @@
         ];
 
         const ABGABE_EBBE_SEQUENCE = [
-            { keys: ['e/4'], duration: 'q' },
-            { keys: ['b/4'], duration: 'q', accidentals: [{ index: 0, type: 'b' }] },
-            { keys: ['f/4'], duration: 'q',},
-            { keys: ['a/4'], duration: 'q' },
-            { keys: ['f/4'], duration: 'q',},
-            { keys: ['d/4'], duration: 'q',},
-            { rest: true, duration: 'qr' },
             { keys: ['a/4'], duration: 'q' },
             { keys: ['b/4'], duration: 'q', accidentals: [{ index: 0, type: 'b' }] },
             { keys: ['g/4'], duration: 'q' },
@@ -577,7 +646,7 @@
         ];
 
         const SHEET_SEQUENCES = {
-            'ebfafd-abgabe': ABGABE_EBBE_SEQUENCE
+            'abgabe': ABGABE_EBBE_SEQUENCE
         };
 
         let currentYear = 1;
@@ -591,13 +660,15 @@
         let questionScrollAdvanceQueued = false;
         
         // Angry Parent mechanic
-        const angryEmojis = ['😡', '😠', '🤬', '💢', '👿', '😤'];
+        const angryEmojis = ['😡', '😠', '🤬', '👿', '😤', '😾'];
         let angryParentTriggered = false;
         let angryParentFirstPopupShown = false;
         let incorrectAnswersCount = 0;
         let activeAngryEmojis = [];
         let lastMouseX = window.innerWidth / 2;
         let lastMouseY = window.innerHeight / 2;
+        let hasMarkedAnyIncorrect = false;
+        let totalQuestionsAnswered = 0;
  
         const PEA_SIZE = 12;
 
@@ -951,11 +1022,35 @@
         }
 
 
+        function triggerRedFlash() {
+            if (!redFlash) return;
+            redFlash.classList.add('flash');
+            setTimeout(() => {
+                redFlash.classList.remove('flash');
+            }, 300);
+        }
+
+        function showAchievement(icon, title, text) {
+            if (!achievementAlert) return;
+            achievementIcon.textContent = icon;
+            achievementTitle.textContent = title;
+            achievementText.textContent = text;
+            achievementAlert.classList.add('visible');
+            setTimeout(() => {
+                achievementAlert.classList.remove('visible');
+            }, 5000);
+        }
+
         function checkAngryParentTrigger() {
-            // 50% chance to spawn emoji on each incorrect answer
-            const randomTrigger = Math.random() < 0.5;
+            // If player never marked anything incorrect, 100% chance
+            // Otherwise 50% chance
+            const triggerChance = hasMarkedAnyIncorrect ? 0.5 : 1.0;
+            const randomTrigger = Math.random() < triggerChance;
             
             if (!randomTrigger) return;
+            
+            // Trigger red flash visual feedback
+            triggerRedFlash();
             
             if (!angryParentTriggered) {
                 angryParentTriggered = true;
@@ -965,7 +1060,7 @@
                     spawnAngryEmoji();
                 }
             } else {
-                // Already triggered before, spawn emoji with 50% chance
+                // Already triggered before, spawn emoji
                 spawnAngryEmoji();
             }
         }
@@ -1014,7 +1109,7 @@
                 element: emojiElement,
                 x: startX,
                 y: startY,
-                baseSpeed: 0.3 + Math.random() * 0.4, // Slower: 0.3-0.7 pixels per frame
+                baseSpeed: 0.4 + Math.random() * 0.2, // Slower: 0.3-0.7 pixels per frame
                 createdAt: performance.now(),
                 wobblePhase: Math.random() * Math.PI * 2,
                 wobbleSpeed: 2 + Math.random() * 2,
@@ -1114,10 +1209,19 @@
             questionScrollAdvanceQueued = true;
             renderQuestions();
             
+            // Track total questions answered
+            totalQuestionsAnswered++;
+            
             // Angry Parent mechanic (Year 1 and Year 2)
             if (decision === 'incorrect') {
                 incorrectAnswersCount++;
+                hasMarkedAnyIncorrect = true;
                 checkAngryParentTrigger();
+            }
+            
+            // Check for "Ja-Sager" achievement (all 24 questions marked correct)
+            if (totalQuestionsAnswered === 24 && incorrectAnswersCount === 0) {
+                showAchievement('🙈', 'Ja-Sager', 'Alle Antworten korrekt, kein Zweifel!');
             }
             
             handleMonthCompletion();
@@ -1464,8 +1568,10 @@
             updateQuestionStates();
             
             // Force trigger angry parent at end of month 10 (currentMonthIndex becomes 11 after increment)
-            if (currentMonthIndex === 11 && !angryParentTriggered) {
+            // Only if player has marked any question as incorrect
+            if (currentMonthIndex === 11 && !angryParentTriggered && hasMarkedAnyIncorrect) {
                 angryParentTriggered = true;
+                triggerRedFlash();
                 if (!angryParentFirstPopupShown) {
                     showAngryParentPopup();
                 } else {
