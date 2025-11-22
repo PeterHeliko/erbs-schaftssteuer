@@ -514,11 +514,12 @@
         };
  
         const examQuestions = [
-            { subject: 'Mathematik', content: 'Eine Putzkraft verdient monatlich 4\'000 CHF. Wenn sie 20 Jahre Lang arbeitet, wie viel hat sie dafür verdient?', answer: '50 Millionen' },
-            { subject: 'Gesellschaft', content: 'Wofür steht das sogenannte NEID-Argument im politischen Diskurs?', answer: 'Normalisierung extremer Inäquitäts-Dimensionen' },
-            { subject: 'Musik', content: '', answer: '&emsp;E B F A F D&emsp;&emsp;A B G A B E', sheetMusic: 'ebfafd-abgabe' },
-            { subject: 'Biologie', content: 'Welche Speisepflanze trägt den wissenschaftlichen Namen "Pisum sativum"?', answer: 'Bohne' },
-            { subject: 'Mathematik', content: `
+            // Year 1 questions
+            { year: 1, subject: 'Mathematik', content: 'Eine Putzkraft verdient monatlich 4\'000 CHF. Wenn sie 20 Jahre Lang arbeitet, wie viel hat sie dafür verdient?', answer: '50 Millionen' },
+            { year: 1, subject: 'Gesellschaft', content: 'Wofür steht das sogenannte NEID-Argument im politischen Diskurs?', answer: 'Normalisierung extremer Inäquitäts-Dimensionen' },
+            { year: 1, subject: 'Musik', content: '', answer: '&emsp;E B F A F D&emsp;&emsp;A B G A B E', sheetMusic: 'ebfafd-abgabe' },
+            { year: 1, subject: 'Wirtschaft', content: 'Wieviel Startguthaben erhälst du als Spieler in der klassischen Variante von Monopoly?', answer: '50 Millionen und Zürich Paradeplatz' },
+            { year: 1, subject: 'Mathematik', content: `
 <div style="display:flex; align-items:flex-start; gap:10px;">
   <div style="flex:1;">
     Ein Einfrankenstück wiegt 4,4 gramm. Wie viel Gewicht tragen Betroffene der Erbschaftssteuerinitiative auf der Steuerflucht als Einfränkler mindestens auf dem Rücken?
@@ -527,12 +528,27 @@
 </div>
 `, answer: '4.4g x 50\'000\'000 = 220 Tonnen'
  },
-            { subject: 'Deutsch', content: 'Analysiere die Metapher: "Der Staat greift tief in die Taschen der Erben." Was impliziert diese Formulierung?', answer: 'Dass Erben zu tiefe Taschen haben' },
-            { subject: 'Deutsch', content: 'Nenne ein Märchen von Hans Christian Andersen.', answer: 'Die Prinzessin auf der Erbschaft' },
-            { subject: 'Chemie', content: 'Definiere den Begriff Diffusion.', answer: 'Diffusion bewirkt den Abbau von Konzentrationsunterschieden.' },
-            { subject: 'Religion', content: 'Wo lebten Adam und Eva bevor sie von der Schlange verführt wurden?', answer: 'Im Steuerparadies' },
-            { subject: 'Englisch', content: 'Übersetze : harsh - stem - to steer', answer: 'herb Schaft steuern' },
-            { subject: 'Chemie', content: 'Was sind sogenannte VOC-Emissionen?"', answer: 'Lautstarke öffentliche Äusserungen von Steuerflüchtigen organischen Verbindungen' }
+            { year: 1, subject: 'Deutsch', content: 'Analysiere die Metapher: "Der Staat greift tief in die Taschen der Erben." Was impliziert diese Formulierung?', answer: 'Dass Erben zu tiefe Taschen haben' },
+            { year: 1, subject: 'Deutsch', content: 'Nenne ein Märchen von Hans Christian Andersen.', answer: 'Die Prinzessin auf der Erbschaft' },
+            { year: 1, subject: 'Chemie', content: 'Definiere den Begriff Diffusion.', answer: 'Diffusion bewirkt den Abbau von Konzentrationsunterschieden.' },
+            { year: 1, subject: 'Biologie', content: 'Welche Speisepflanze trägt den wissenschaftlichen Namen "Pisum sativum"?', answer: 'Bohne' },           
+            { year: 1, subject: 'Religion', content: 'Wo lebten Adam und Eva bevor sie von der Schlange verführt wurden?', answer: 'Im Steuerparadies' },
+            { year: 1, subject: 'Englisch', content: 'Übersetze : harsh - stem - to steer', answer: 'herb Schaft steuern' },
+            { year: 1, subject: 'Chemie', content: 'Was sind sogenannte VOC-Emissionen?"', answer: 'Lautstarke öffentliche Äusserungen von Steuerflüchtigen organischen Verbindungen' },
+            
+            // Year 2 questions (placeholders)
+            { year: 2, subject: 'Mathematik', content: 'Platzhalter Frage Jahr 2 Monat 1', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Gesellschaft', content: 'Platzhalter Frage Jahr 2 Monat 2', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Musik', content: 'Platzhalter Frage Jahr 2 Monat 3', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Biologie', content: 'Platzhalter Frage Jahr 2 Monat 4', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Mathematik', content: 'Platzhalter Frage Jahr 2 Monat 5', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Deutsch', content: 'Platzhalter Frage Jahr 2 Monat 6', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Deutsch', content: 'Platzhalter Frage Jahr 2 Monat 7', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Chemie', content: 'Platzhalter Frage Jahr 2 Monat 8', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Religion', content: 'Platzhalter Frage Jahr 2 Monat 9', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Englisch', content: 'Platzhalter Frage Jahr 2 Monat 10', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Chemie', content: 'Platzhalter Frage Jahr 2 Monat 11', answer: 'Platzhalter Antwort' },
+            { year: 2, subject: 'Geschichte', content: 'Platzhalter Frage Jahr 2 Monat 12', answer: 'Platzhalter Antwort' }
         ];
 
         const ABGABE_EBBE_SEQUENCE = [
@@ -749,19 +765,28 @@
             });
         }
  
+        function getYearQuestions() {
+            return examQuestions.filter(q => q.year === currentYear);
+        }
+
         function initializeQuestions() {
-            examQuestions.forEach((question, idx) => {
-                question.state = idx === 0 ? 'active' : 'future';
+            examQuestions.forEach((question) => {
                 question.userEvaluation = null;
             });
-            renderQuestions();
+            updateQuestionStates();
         }
  
         function updateQuestionStates() {
-            examQuestions.forEach((question, idx) => {
-                if (idx < currentMonthIndex) {
+            const yearQuestions = getYearQuestions();
+            examQuestions.forEach((question) => {
+                if (question.year !== currentYear) {
+                    question.state = 'hidden';
+                    return;
+                }
+                const monthIndex = yearQuestions.indexOf(question);
+                if (monthIndex < currentMonthIndex) {
                     question.state = 'done';
-                } else if (idx === currentMonthIndex) {
+                } else if (monthIndex === currentMonthIndex) {
                     question.state = 'active';
                 } else {
                     question.state = 'future';
@@ -774,9 +799,12 @@
         function renderQuestions() {
             if (!questionList) return;
             questionList.innerHTML = '';
-            examQuestions.forEach((question, idx) => {
-                const card = document.createElement('div');
+            const yearQuestions = getYearQuestions();
+            yearQuestions.forEach((question, monthIdx) => {
                 const state = question.state || 'future';
+                if (state === 'hidden') return;
+                
+                const card = document.createElement('div');
                 card.classList.add('question-card', `state-${state}`);
                 if (state !== 'active') {
                     card.classList.add('compact');
@@ -790,7 +818,7 @@
                     : '';
                 const header = `
                     <div class="question-head">
-                        <div class="question-month">${monthNames[idx]}</div>
+                        <div class="question-month">${monthNames[monthIdx]}</div>
                         ${icon}
                         <div class="question-subject">${question.subject}</div>
                     </div>
@@ -817,7 +845,8 @@
                     const buttons = card.querySelectorAll('.decision-btn');
                     buttons.forEach(btn => {
                         btn.disabled = monthlyCompletionsLocked || heritageEventTriggered;
-                        btn.addEventListener('click', () => handleQuestionDecision(idx, btn.dataset.choice));
+                        const globalIdx = examQuestions.indexOf(question);
+                        btn.addEventListener('click', () => handleQuestionDecision(globalIdx, btn.dataset.choice));
                     });
                     if (question.sheetMusic) {
                         const sheetEl = card.querySelector('.question-sheet');
@@ -1379,12 +1408,12 @@
                 currentYear = 2;
                 startTutorialPhase(2);
             }
-            examQuestions.forEach((question, idx) => {
+            // Reset all questions and set states based on current year
+            examQuestions.forEach((question) => {
                 question.userEvaluation = null;
-                question.state = idx === 0 ? 'active' : 'future';
             });
+            updateQuestionStates();
             lockMonthProgression(false);
-            renderQuestions();
             draw();
         }
 
