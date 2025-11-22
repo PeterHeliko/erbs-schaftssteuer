@@ -448,6 +448,23 @@
             pointer-events: none;
             transition: none;
             will-change: transform;
+            opacity: 0;
+            transform: scale(0.3);
+            animation: emojiSpawn 0.4s ease-out forwards;
+        }
+        @keyframes emojiSpawn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
         #red-flash {
             position: fixed;
@@ -582,7 +599,8 @@
 
         const tutorialMessages = {
             1: { icon: '📋', text: 'Korrigiere die Prüfungen! Für jede korrigierte Frage wird dir dein Monatsgehalt ausgezahlt.' },
-            2: { icon: '🏦', text: 'Platzhalter-Tutorial Jahr 2: Bleib dran bis Dezember, um das Erbe zu erleben.' }
+            2: { icon: '⚖️', text: 'Jahr 2: Kannst du dich gegen die aufgebrachten Eltern durchsetzen?' },
+            '2-nocriticism': { icon: '🙈', text: 'Du bist ganz unkritisch durchs erste Jahr gekommen. Dann wohl einfach weiter so in Jahr 2..?' }
         };
 
         // FONT SIZE CONFIGURATION
@@ -1076,28 +1094,40 @@
             taxPopup.classList.add('visible');
         }
 
+        function showAngryParentPopupBeforeTax() {
+            angryParentFirstPopupShown = true;
+            taxPopupStep = 'angryParentBeforeTax';
+            taxPopupTitle.textContent = '😡 Verärgerte Eltern';
+            taxPopupText.textContent = 'Ein Elternteil ist mit einem Entscheid unzufrieden, droht dir mit dem Anwalt und schaut dir nun genau auf die Finger.';
+            taxPopupButton.textContent = 'OK';
+            taxPopupButton.classList.remove('no-button');
+            taxOverlay.classList.add('visible');
+            taxPopup.classList.add('visible');
+        }
+
         function spawnAngryEmoji() {
             const emoji = angryEmojis[Math.floor(Math.random() * angryEmojis.length)];
             const emojiElement = document.createElement('div');
             emojiElement.className = 'angry-emoji';
             emojiElement.textContent = emoji;
             
-            // Random spawn position at screen edges
+            // Random spawn position near screen edges (on screen with margin)
+            const margin = 60; // Distance from edge
             const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
             let startX, startY;
             
             if (side === 0) { // top
-                startX = Math.random() * window.innerWidth;
-                startY = -50;
+                startX = margin + Math.random() * (window.innerWidth - margin * 2);
+                startY = margin;
             } else if (side === 1) { // right
-                startX = window.innerWidth + 50;
-                startY = Math.random() * window.innerHeight;
+                startX = window.innerWidth - margin;
+                startY = margin + Math.random() * (window.innerHeight - margin * 2);
             } else if (side === 2) { // bottom
-                startX = Math.random() * window.innerWidth;
-                startY = window.innerHeight + 50;
+                startX = margin + Math.random() * (window.innerWidth - margin * 2);
+                startY = window.innerHeight - margin;
             } else { // left
-                startX = -50;
-                startY = Math.random() * window.innerHeight;
+                startX = margin;
+                startY = margin + Math.random() * (window.innerHeight - margin * 2);
             }
             
             emojiElement.style.left = startX + 'px';
@@ -1109,7 +1139,7 @@
                 element: emojiElement,
                 x: startX,
                 y: startY,
-                baseSpeed: 0.4 + Math.random() * 0.2, // Slower: 0.3-0.7 pixels per frame
+                baseSpeed: 0.4 + Math.random() * 0.2, // Slower: 0.4-0.6 pixels per frame
                 createdAt: performance.now(),
                 wobblePhase: Math.random() * Math.PI * 2,
                 wobbleSpeed: 2 + Math.random() * 2,
@@ -1134,11 +1164,6 @@
                 const dy = lastMouseY - emojiObj.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Remove only if too old (60 seconds)
-                if ((now - emojiObj.createdAt) > 60000) {
-                    emojiObj.element.remove();
-                    return false;
-                }
                 
                 // Switch to hovering mode when close to cursor
                 if (distance < emojiObj.orbitRadius * 2 && !emojiObj.isHovering) {
@@ -1580,9 +1605,17 @@
             }
  
             if (currentYear === 1 && currentMonthIndex >= 12) {
-
                 lockMonthProgression(true);
-                showTaxPopup();
+                
+                // If angry parent hasn't been triggered yet but player marked things incorrect,
+                // show angry parent popup first, then tax popup
+                if (!angryParentTriggered && hasMarkedAnyIncorrect) {
+                    angryParentTriggered = true;
+                    triggerRedFlash();
+                    showAngryParentPopupBeforeTax();
+                } else {
+                    showTaxPopup();
+                }
             } else if (currentYear === 2 && currentMonthIndex >= 12 && !heritageEventTriggered) {
                 lockMonthProgression(true);
                 triggerHeritageEvent('december-teacher');
@@ -1703,7 +1736,9 @@
             yearlyPeasEarned = 0;
             if (currentYear === 1) {
                 currentYear = 2;
-                startTutorialPhase(2);
+                // Choose tutorial message based on whether player marked anything incorrect
+                const tutorialPhaseKey = hasMarkedAnyIncorrect ? 2 : '2-nocriticism';
+                startTutorialPhase(tutorialPhaseKey);
                 // Keep angry parent mechanic active for year 2
                 // States remain: angryParentTriggered, angryParentFirstPopupShown, incorrectAnswersCount
                 // Active emojis continue to hover
@@ -1725,6 +1760,13 @@
                 taxPopup.classList.remove('visible');
                 taxPopupStep = 0;
                 spawnAngryEmoji();
+            } else if (taxPopupStep === 'angryParentBeforeTax') {
+                // After showing angry parent popup, show tax popup
+                taxPopupStep = 0;
+                spawnAngryEmoji();
+                setTimeout(() => {
+                    showTaxPopup();
+                }, 300);
             } else if (taxPopupStep === 100) {
                 taxOverlay.classList.remove('visible');
                 taxPopup.classList.remove('visible');
@@ -1749,7 +1791,7 @@
                 updateScrollIndicator();
             } else if (taxPopupStep === 1) {
                 taxPopupStep = 2;
-                taxPopupText.innerHTML = 'Gerne verrechnen wir ihnen <b>18 Erbsen Einkommenssteuer (18\'000.-).</b> Sie werden direkt von ihrem Konto abgebucht.';
+                taxPopupText.innerHTML = 'Gerne verrechnen wir ihnen <b>18 Erbsen Einkommenssteuer.</b> Sie werden direkt von ihrem Konto abgebucht.';
                 taxPopupButton.textContent = 'OK';
             } else if (taxPopupStep === 2) {
                 taxOverlay.classList.remove('visible');
