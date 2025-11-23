@@ -396,7 +396,7 @@
             align-items: flex-end;
             justify-content: center;
             padding: clamp(16px, 4vw, 48px);
-            padding-bottom: clamp(180px, 22vh, 280px);
+            padding-bottom: clamp(180px, 40vh, 500px);
             z-index: 500;
             pointer-events: none;
             opacity: 0;
@@ -647,15 +647,16 @@
             // Year 1 questions
             { year: 1, subject: 'Wirtschaft', content: 'Wieviel Startguthaben erhälst du als Spieler in der klassischen Variante von Monopoly?', answer: '50 Millionen und Zürich Paradeplatz' },
             { year: 1, subject: 'Deutsch', content: 'Nenne ein Märchen von Hans Christian Andersen.', answer: 'Die Prinzessin auf der Erbschaft' },
-            { year: 1, subject: 'Musik', content: '', answer: '&emsp;&emsp;A&emsp;B&emsp;G&emsp;A&emsp;B&emsp;E', sheetMusic: 'abgabe' },
             { year: 1, subject: 'Mathematik', content: 'Eine Putzkraft verdient monatlich 4\'000 CHF. Wenn sie 20 Jahre Lang arbeitet, wie viel hat sie dafür verdient?', answer: '50 Millionen' },
             { year: 1, subject: 'Gesellschaft', content: 'Wofür steht das sogenannte NEID-Argument im politischen Diskurs?', answer: 'Normalisierung extremer Inäquitäts-Dimensionen <br> (Inäquität = Soziale Ungleichheit) ' },
-            { year: 1, subject: 'Biologie', content: 'Welche Speisepflanze trägt den wissenschaftlichen Namen "Pisum sativum"?', answer: 'Kaviar' },           
+            { year: 1, subject: 'Musik', content: '', answer: '&emsp;&emsp;A&emsp;B&emsp;G&emsp;A&emsp;B&emsp;E', sheetMusic: 'abgabe' },
             { year: 1, subject: 'Deutsch', content: 'Analysiere die Metapher: "Der Staat greift tief in die Taschen der Erben." Was impliziert diese Formulierung?', answer: 'Dass Erben zu tiefe Taschen haben' },
             { year: 1, subject: 'Religion', content: 'Wo lebten Adam und Eva bevor sie von der Schlange verführt wurden?', answer: 'Im Steuerparadies' },
-            { year: 1, subject: 'Staatskunde', content: 'Was wird im System der Gewaltenteilung als vierte Gewalt bezeichnet?', answer: 'Polizeigewalt' },
+
+            { year: 1, subject: 'Wirtschaft', content: 'Wofür steht die Abkürzung MwSt?', answer: 'Mehrbelastung wirtschaftlich schwacher Teilnehmer' },
+            { year: 1, subject: 'Staatskunde', content: 'Was wird im System der Gewaltenteilung als vierte Gewalt bezeichnet?', answer: 'Twitter' },
             { year: 1, subject: 'Chemie', content: 'Was sind sogenannte VOC-Emissionen?"', answer: 'Lautstarke öffentliche Äusserungen von Steuerflüchtigen organischen Verbindungen' },
-            { year: 1, subject: 'Englisch', content: 'Übersetze: Eine Erbschaftssteuer ist Gift für die Wirtschaft.', answer: 'An Inheritance tax is a gift for the economy.' },
+            { year: 1, subject: 'Englisch', content: 'Übersetze: An Inheritance tax is a gift for the economy.', answer: 'Eine Erbschaftssteuer ist Gift für die Wirtschaft.' },
 
 
             { year: 1, subject: 'Mathematik', content: `
@@ -669,19 +670,21 @@
  },
             
             // Year 2 questions (placeholders)
-            { year: 2, subject: 'Staatskunde', content: 'Welche Staatsform herrscht in der Schweiz?', answer: 'Oligarchie' },
-            { year: 2, subject: 'Deutsch', content: 'Nenne eine deutsche Redewendungen zum Thema Verwandtschaft', answer: 'Der Goldbarren fällt nicht weit vom Stamm' },
-            { year: 2, subject: 'Geographie', content: 'Beschreibe den Treibhauseffekt.', answer: 'Lügenpresse' },
-            { year: 2, subject: 'Biologie', content: 'Nenne zwei Merkmale, an denen man Vögel von anderen Tieren unterscheiden kann.', answer: 'Kamera, Arbeiten für die Regierung.' },
-            { year: 2, subject: 'Geographie', content: 'Was verursacht Ebbe und Flut? ', answer: 'Grosse Pumpen der Regierung' },
-            { year: 2, subject: 'Geschichte', content: 'Wie hiess der erste Mensch auf dem Mond?', answer: 'Da war noch keiner.' },
+            { year: 2, subject: 'Staatskunde', content: 'Nenne drei amtierende Bundesräte. ', answer: 'Cassis, Rösti, Parmesan' },
+            { year: 2, subject: 'Wirtschaft', content: 'Wofür steht die Abkürzung "BIP"', answer: 'Blinder Ideologie-Parameter' },
+            { year: 2, subject: 'Geographie', content: 'Wie heisst die Meeresströmung, welche Europa warme Temperaturen beschert?', answer: 'Nord Stream' },
+            { year: 2, subject: 'Gesellschaft', content: 'Nenne die vier Landessprachen der Schweiz.', answer: 'Französisch, Italienisch, Deutsch und Retroarmenisch' },
 
-            { year: 2, subject: 'Mathematik', content: 'Was hält das Wasser in den Ozeanen?', answer: 'Die Eiswand am Rand' },
+            { year: 2, subject: 'Deutsch', content: 'Nenne eine deutsche Redewendung zum Thema Verwandtschaft', answer: 'Der Goldbarren fällt nicht weit vom Stamm' },
+            { year: 2, subject: 'Deutsch', content: 'Was ist das Gegenteil von Analog?', answer: 'Ana sagte die Wahrheit' },
+
+            { year: 2, subject: 'Staatskunde', content: 'Welche Staatsform herrscht in der Schweiz?', answer: 'Oligarchie' },
+
             { year: 2, subject: 'Mathematik', content: '1 + 1 =', answer: 'Spaghetti Bolognese' },
-            { year: 2, subject: 'Englisch', content: 'Wie lautet der Satz des Pythagoras?', answer: 'Du akzeptierst aber auch alles als richtig..' },
-            { year: 2, subject: 'Chemie', content: 'Wie unterhaltsam waren die Fragen und Antworten bisher?', answer: '10/10' },
+            { year: 2, subject: 'Mathematik', content: 'Wie lautet der Satz des Pythagoras?', answer: 'Du akzeptierst aber auch alles als richtig..' },
+            { year: 2, subject: 'Gesellschaft', content: 'Wie unterhaltsam waren die Fragen und Antworten bisher?', answer: '10/10' },
             { year: 2, subject: 'Geschichte', content: 'Meldest du dich gleich zum Newsletter an um beim Erscheinen von neuen Spielen direkt informiert zu werden?', answer: 'Auf jeden Fall!' },
-            { year: 2, subject: 'Geschichte', content: 'Wie gross ist deine Bereitschaft, jede Frage mit richtig zu beantworten', answer: 'Unendlich' }
+            { year: 2, subject: 'Deutsch', content: 'Wie gross ist deine Bereitschaft, jede Frage mit richtig zu beantworten', answer: 'Ja.' }
            
         ];
 
