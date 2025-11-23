@@ -721,6 +721,8 @@
         let hasMarkedAnyIncorrect = false;
         let totalQuestionsAnswered = 0;
         let lastAngryEmojiUpdateTime = performance.now();
+        let angryParentTriggerProbability = 0.65; // Initial probability (65% or 100% if never marked incorrect)
+        const ANGRY_PARENT_REDUCTION_FACTOR = 0.8; // Reduce by 25% after each trigger
         
         // Mobile detection
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
@@ -1115,8 +1117,8 @@
 
         function checkAngryParentTrigger() {
             // If player never marked anything incorrect, 100% chance
-            // Otherwise 50% chance
-            const triggerChance = hasMarkedAnyIncorrect ? 0.65 : 1.0;
+            // Otherwise use current probability (which decreases with each trigger)
+            const triggerChance = hasMarkedAnyIncorrect ? angryParentTriggerProbability : 1.0;
             const randomTrigger = Math.random() < triggerChance;
             
             if (!randomTrigger) return;
@@ -1135,6 +1137,9 @@
                 // Already triggered before, spawn emoji
                 spawnAngryEmoji();
             }
+            
+            // Reduce probability for next trigger by 25%
+            angryParentTriggerProbability *= ANGRY_PARENT_REDUCTION_FACTOR;
         }
 
         function showAngryParentPopup(continueAfter = false) {
