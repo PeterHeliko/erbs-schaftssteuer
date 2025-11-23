@@ -718,6 +718,11 @@
         let totalQuestionsAnswered = 0;
         let lastAngryEmojiUpdateTime = performance.now();
         
+        // Mobile detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                         ('ontouchstart' in window) || 
+                         (navigator.maxTouchPoints > 0);
+        
         // Stage 2: Lawsuit mechanic
         let lawsuitPopupShown = false;
         let playerChoseKleinBeigeben = false;
@@ -1224,6 +1229,35 @@
             activeAngryEmojis.push(emojiObj);
         }
 
+        function getActiveButtonPositions() {
+            const positions = [];
+            const activeCard = document.querySelector('.question-card.state-active');
+            if (!activeCard) return positions;
+            
+            const correctBtn = activeCard.querySelector('.decision-btn.correct');
+            const incorrectBtn = activeCard.querySelector('.decision-btn.incorrect');
+            
+            if (correctBtn && !correctBtn.disabled) {
+                const rect = correctBtn.getBoundingClientRect();
+                positions.push({
+                    x: rect.left + rect.width / 2,
+                    y: rect.bottom + 20, // 20px below the button
+                    type: 'correct'
+                });
+            }
+            
+            if (incorrectBtn && !incorrectBtn.disabled) {
+                const rect = incorrectBtn.getBoundingClientRect();
+                positions.push({
+                    x: rect.left + rect.width / 2,
+                    y: rect.bottom + 20, // 20px below the button
+                    type: 'incorrect'
+                });
+            }
+            
+            return positions;
+        }
+
         function updateAngryEmojis() {
             const now = performance.now();
             const deltaTime = (now - lastAngryEmojiUpdateTime) / 1000; // Convert to seconds
@@ -1232,9 +1266,26 @@
             // Clamp deltaTime to prevent huge jumps (e.g., when tab is inactive)
             const clampedDeltaTime = Math.min(deltaTime, 0.1);
             
-            activeAngryEmojis = activeAngryEmojis.filter(emojiObj => {
-                const dx = lastMouseX - emojiObj.x;
-                const dy = lastMouseY - emojiObj.y;
+            // Get target positions based on device type
+            let targetPositions = [];
+            if (isMobile) {
+                targetPositions = getActiveButtonPositions();
+            }
+            
+            activeAngryEmojis = activeAngryEmojis.filter((emojiObj, index) => {
+                // On mobile, assign each emoji to a button position
+                let targetMouseX = lastMouseX;
+                let targetMouseY = lastMouseY;
+                
+                if (isMobile && targetPositions.length > 0) {
+                    // Distribute emojis between available button positions
+                    const assignedPosition = targetPositions[index % targetPositions.length];
+                    targetMouseX = assignedPosition.x;
+                    targetMouseY = assignedPosition.y;
+                }
+                
+                const dx = targetMouseX - emojiObj.x;
+                const dy = targetMouseY - emojiObj.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
                 // Determine hover threshold - enter hover mode when close to cursor
@@ -1244,11 +1295,11 @@
                 if (distance < hoverThreshold && !emojiObj.isHovering) {
                     emojiObj.isHovering = true;
                     emojiObj.hoverTime = 0;
-                    // Initialize orbit center to current cursor position
-                    emojiObj.orbitCenterX = lastMouseX;
-                    emojiObj.orbitCenterY = lastMouseY;
+                    // Initialize orbit center to current cursor/button position
+                    emojiObj.orbitCenterX = targetMouseX;
+                    emojiObj.orbitCenterY = targetMouseY;
                     // Set initial orbit angle to current position relative to cursor
-                    const angleToEmoji = Math.atan2(emojiObj.y - lastMouseY, emojiObj.x - lastMouseX);
+                    const angleToEmoji = Math.atan2(emojiObj.y - targetMouseY, emojiObj.x - targetMouseX);
                     // Map to lower semicircle (0 to π)
                     emojiObj.orbitAngle = ((angleToEmoji % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
                     if (emojiObj.orbitAngle > Math.PI) {
@@ -1264,14 +1315,14 @@
                 if (emojiObj.isHovering) {
                     // Initialize orbit center if not set
                     if (!emojiObj.orbitCenterX) {
-                        emojiObj.orbitCenterX = lastMouseX;
-                        emojiObj.orbitCenterY = lastMouseY;
+                        emojiObj.orbitCenterX = targetMouseX;
+                        emojiObj.orbitCenterY = targetMouseY;
                     }
                     
-                    // Very slow interpolation towards cursor position (emojis lag behind cursor movement)
+                    // Very slow interpolation towards cursor/button position (emojis lag behind cursor movement)
                     const smoothFactor = 0.008;
-                    emojiObj.orbitCenterX += (lastMouseX - emojiObj.orbitCenterX) * smoothFactor;
-                    emojiObj.orbitCenterY += (lastMouseY - emojiObj.orbitCenterY) * smoothFactor;
+                    emojiObj.orbitCenterX += (targetMouseX - emojiObj.orbitCenterX) * smoothFactor;
+                    emojiObj.orbitCenterY += (targetMouseY - emojiObj.orbitCenterY) * smoothFactor;
                     
                     // Increment hover time for organic variations
                     emojiObj.hoverTime += clampedDeltaTime;
@@ -1304,11 +1355,11 @@
                     targetX = emojiObj.orbitCenterX + Math.cos(emojiObj.orbitAngle) * currentRadius;
                     targetY = emojiObj.orbitCenterY + Math.sin(emojiObj.orbitAngle) * currentRadius;
                 } else {
-                    // Approaching mode: move towards cursor position in lower semicircle
+                    // Approaching mode: move towards cursor/button position in lower semicircle
                     // Calculate angle to cursor
                     const angleToCursor = Math.atan2(dy, dx);
                     
-                    // Target a position in the lower semicircle around the cursor
+                    // Target a position in the lower semicircle around the cursor/button
                     // Use the emoji's future orbit angle for a smooth entry
                     if (!emojiObj.approachTargetAngle) {
                         // Set a random target angle in lower semicircle for approach
@@ -1317,10 +1368,10 @@
                     
                     const targetAngle = emojiObj.approachTargetAngle;
                     
-                    // Target position is offset from cursor by the orbit radius
+                    // Target position is offset from cursor/button by the orbit radius
                     const approachRadius = emojiObj.orbitRadius;
-                    targetX = lastMouseX + Math.cos(targetAngle) * approachRadius;
-                    targetY = lastMouseY + Math.sin(targetAngle) * approachRadius;
+                    targetX = targetMouseX + Math.cos(targetAngle) * approachRadius;
+                    targetY = targetMouseY + Math.sin(targetAngle) * approachRadius;
                 }
                 
                 // Smooth movement towards target position using interpolation
@@ -1330,7 +1381,8 @@
                 let deltaY = (targetY - emojiObj.y) * lerpFactor;
                 
                 // Limit maximum speed (pixels per frame at 60fps)
-                const maxSpeed = emojiObj.isHovering ? 1.5 : 1.5;
+                // Slightly faster on mobile for better visibility
+                const maxSpeed = isMobile ? 2.5 : (emojiObj.isHovering ? 2.0 : 1.5);
                 const currentSpeed = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                 
                 if (currentSpeed > maxSpeed) {
