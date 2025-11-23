@@ -397,12 +397,24 @@
             justify-content: center;
             padding: clamp(16px, 4vw, 48px);
             padding-bottom: clamp(180px, 22vh, 280px);
-            z-index: 150;
+            z-index: 500;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
+        .tutorial-overlay::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
         .tutorial-overlay.visible {
+            opacity: 1;
+        }
+        .tutorial-overlay.visible.dimmed::before {
             opacity: 1;
         }
         .tutorial-overlay .tutorial-card {
@@ -416,6 +428,8 @@
             text-align: center;
             transform: translateY(10px) scale(0.95);
             transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1;
         }
         .tutorial-overlay.visible .tutorial-card {
             transform: translateY(0) scale(1);
@@ -689,6 +703,7 @@
         let monthlyCompletionsLocked = false;
         let showTutorial = true;
         let tutorialPhase = 1;
+        let tutorialDimmed = false;
         let questionScrollAdvanceQueued = false;
         
         // Angry Parent mechanic
@@ -771,6 +786,7 @@
         gridRows = calcGridRows();
         initializeSpawnOrder();
         greenPeaPlacementIndex = 0;
+        tutorialDimmed = true; // Enable dimming for initial tutorial
         syncTutorialOverlay();
         initializeQuestions();
  
@@ -1831,6 +1847,7 @@
             tutorialText.innerHTML = `<p>${content.text}</p>`;
             tutorialIcon.textContent = content.icon;
             tutorialOverlay.classList.toggle('visible', showTutorial);
+            tutorialOverlay.classList.toggle('dimmed', showTutorial && tutorialDimmed);
             tutorialOverlay.setAttribute('aria-hidden', String(!showTutorial));
         }
 
@@ -1839,10 +1856,18 @@
             showTutorial = false;
             syncTutorialOverlay();
         }
+        
+        function clearTutorialDim() {
+            if (tutorialDimmed) {
+                tutorialDimmed = false;
+                syncTutorialOverlay();
+            }
+        }
 
         function startTutorialPhase(phase) {
             tutorialPhase = phase;
             showTutorial = true;
+            tutorialDimmed = true;
             syncTutorialOverlay();
         }
 
@@ -2419,6 +2444,10 @@
                 lastMouseY = e.touches[0].clientY;
             }
         });
+        
+        // Clear tutorial dimming on any click or touch
+        document.addEventListener('click', clearTutorialDim, { once: false });
+        document.addEventListener('touchstart', clearTutorialDim, { once: false });
 
         canvas.addEventListener('mousemove', (e) => {
             const pos = getMousePos(e);
