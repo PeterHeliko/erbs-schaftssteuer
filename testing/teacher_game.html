@@ -1194,7 +1194,7 @@
                 wobblePhase: Math.random() * Math.PI * 2,
                 wobbleSpeed: 2 + Math.random() * 2,
                 wobbleAmplitude: 5 + Math.random() * 8, // Weaker wobble: 5-13 pixels
-                orbitAngle: Math.random() * Math.PI * 2,
+                orbitAngle: Math.random() * Math.PI, // Start in lower semicircle (0 to π)
                 orbitSpeed: (0.5 + Math.random() * 1) * (Math.random() < 0.5 ? 1 : -1), // Random direction
                 orbitRadius: 40 + Math.random() * 60,
                 targetOrbitRadius: 40 + Math.random() * 60,
@@ -1231,7 +1231,7 @@
                 // Calculate target position
                 let targetX, targetY;
                 
-                if (emojiObj.isHovering) {
+                 if (emojiObj.isHovering) {
                     // Add smoothing/damping to cursor tracking in hover mode
                     if (!emojiObj.orbitCenterX) {
                         emojiObj.orbitCenterX = lastMouseX;
@@ -1243,9 +1243,25 @@
                     emojiObj.orbitCenterX += (lastMouseX - emojiObj.orbitCenterX) * smoothFactor;
                     emojiObj.orbitCenterY += (lastMouseY - emojiObj.orbitCenterY) * smoothFactor;
                     
-                    // Orbit around smoothed cursor position
+                    // Orbit around smoothed cursor position, constrained to lower semicircle
                     emojiObj.hoverTime += clampedDeltaTime;
-                    emojiObj.orbitAngle += emojiObj.orbitSpeed * clampedDeltaTime * 0.5; // Slower orbit speed
+                    
+                    // Instead of letting angle roam freely, oscillate within lower semicircle range
+                    // Lower semicircle: angles from 0 to π (where sin > 0, meaning Y increases = down on screen)
+                    // Use a bounded oscillation
+                    const oscillationSpeed = emojiObj.orbitSpeed * clampedDeltaTime * 0.5;
+                    emojiObj.orbitAngle += oscillationSpeed;
+                    
+                    // Bounce back if trying to leave lower semicircle
+                    const minAngle = 0;
+                    const maxAngle = Math.PI;
+                    if (emojiObj.orbitAngle < minAngle) {
+                        emojiObj.orbitAngle = minAngle;
+                        emojiObj.orbitSpeed *= -1; // Reverse direction
+                    } else if (emojiObj.orbitAngle > maxAngle) {
+                        emojiObj.orbitAngle = maxAngle;
+                        emojiObj.orbitSpeed *= -1; // Reverse direction
+                    }
                     
                     // Smoothly vary orbit radius for more natural movement
                     const radiusVariation = Math.sin(emojiObj.hoverTime * 0.5) * 10; // Reduced variation
