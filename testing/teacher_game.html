@@ -1223,22 +1223,36 @@
                 if (distance < emojiObj.orbitRadius * 2 && !emojiObj.isHovering) {
                     emojiObj.isHovering = true;
                     emojiObj.hoverTime = 0;
+                    // Lock the orbit center when entering hover mode
+                    emojiObj.orbitCenterX = lastMouseX;
+                    emojiObj.orbitCenterY = lastMouseY;
                 }
                 
                 // Calculate target position
                 let targetX, targetY;
                 
                 if (emojiObj.isHovering) {
-                    // Orbit around cursor
+                    // Add smoothing/damping to cursor tracking in hover mode
+                    if (!emojiObj.orbitCenterX) {
+                        emojiObj.orbitCenterX = lastMouseX;
+                        emojiObj.orbitCenterY = lastMouseY;
+                    }
+                    
+                    // Smooth interpolation towards cursor (slower response = less jitter)
+                    const smoothFactor = 0.001; // Lower = smoother, less jitter
+                    emojiObj.orbitCenterX += (lastMouseX - emojiObj.orbitCenterX) * smoothFactor;
+                    emojiObj.orbitCenterY += (lastMouseY - emojiObj.orbitCenterY) * smoothFactor;
+                    
+                    // Orbit around smoothed cursor position
                     emojiObj.hoverTime += clampedDeltaTime;
-                    emojiObj.orbitAngle += emojiObj.orbitSpeed * clampedDeltaTime;
+                    emojiObj.orbitAngle += emojiObj.orbitSpeed * clampedDeltaTime * 0.5; // Slower orbit speed
                     
                     // Smoothly vary orbit radius for more natural movement
-                    const radiusVariation = Math.sin(emojiObj.hoverTime * 0.5) * 15;
+                    const radiusVariation = Math.sin(emojiObj.hoverTime * 0.5) * 10; // Reduced variation
                     const currentRadius = emojiObj.targetOrbitRadius + radiusVariation;
                     
-                    targetX = lastMouseX + Math.cos(emojiObj.orbitAngle) * currentRadius;
-                    targetY = lastMouseY + Math.sin(emojiObj.orbitAngle) * currentRadius;
+                    targetX = emojiObj.orbitCenterX + Math.cos(emojiObj.orbitAngle) * currentRadius;
+                    targetY = emojiObj.orbitCenterY + Math.sin(emojiObj.orbitAngle) * currentRadius;
                 } else {
                     // Move towards cursor but offset by future orbit position
                     const anticipatedAngle = Math.atan2(dy, dx) + Math.PI / 4;
@@ -1253,21 +1267,27 @@
                 const tdy = targetY - emojiObj.y;
                 const targetDist = Math.sqrt(tdx * tdx + tdy * tdy);
                 
-                if (targetDist > 1) {
+                // Dead zone: don't move if very close to target (reduces jitter)
+                const deadZone = emojiObj.isHovering ? 2 : 1;
+                if (targetDist > deadZone) {
                     const angle = Math.atan2(tdy, tdx);
-                    const moveSpeed = emojiObj.isHovering ? emojiObj.baseSpeed * 1.2 : emojiObj.baseSpeed;
+                    // Slower speed when hovering
+                    const moveSpeed = emojiObj.isHovering ? emojiObj.baseSpeed * 0.8 : emojiObj.baseSpeed;
                     
                     // Move towards target (scale by deltaTime for frame-rate independence)
                     const pixelsPerSecond = moveSpeed * 60; // Convert per-frame to per-second
-                    emojiObj.x += Math.cos(angle) * pixelsPerSecond * clampedDeltaTime;
-                    emojiObj.y += Math.sin(angle) * pixelsPerSecond * clampedDeltaTime;
+                    const moveDistance = Math.min(targetDist, pixelsPerSecond * clampedDeltaTime); // Don't overshoot
+                    emojiObj.x += Math.cos(angle) * moveDistance;
+                    emojiObj.y += Math.sin(angle) * moveDistance;
                 }
                 
-                // Update wobble phase
-                emojiObj.wobblePhase += emojiObj.wobbleSpeed * clampedDeltaTime;
+                // Update wobble phase (slower when hovering)
+                const wobbleSpeedMultiplier = emojiObj.isHovering ? 0.7 : 1.0;
+                emojiObj.wobblePhase += emojiObj.wobbleSpeed * clampedDeltaTime * wobbleSpeedMultiplier;
                 
                 // Apply wobble perpendicular to movement direction
-                const wobbleOffset = Math.sin(emojiObj.wobblePhase) * emojiObj.wobbleAmplitude;
+                const wobbleAmplitude = emojiObj.isHovering ? emojiObj.wobbleAmplitude * 0.6 : emojiObj.wobbleAmplitude;
+                const wobbleOffset = Math.sin(emojiObj.wobblePhase) * wobbleAmplitude;
                 const angle = Math.atan2(tdy, tdx);
                 const perpX = -Math.sin(angle);
                 const perpY = Math.cos(angle);
