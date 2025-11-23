@@ -404,7 +404,7 @@
             visibility: hidden;
         }
         .tutorial-overlay.dimmed {
-            pointer-events: auto;
+            pointer-events: auto !important;
             cursor: pointer;
         }
         .tutorial-overlay::before {
@@ -1920,8 +1920,12 @@
             tutorialOverlay.classList.toggle('visible', showTutorial);
             tutorialOverlay.classList.toggle('dimmed', showTutorial && tutorialDimmed);
             tutorialOverlay.setAttribute('aria-hidden', String(!showTutorial));
-            // Ensure the overlay doesn't block touch events when hidden
+            // Manage pointer events based on state
             if (!showTutorial) {
+                tutorialOverlay.style.pointerEvents = 'none';
+            } else if (tutorialDimmed) {
+                tutorialOverlay.style.pointerEvents = 'auto';
+            } else {
                 tutorialOverlay.style.pointerEvents = 'none';
             }
         }
@@ -1930,10 +1934,6 @@
             if (!showTutorial) return;
             showTutorial = false;
             tutorialDimmed = false;
-            // Immediately remove pointer events to prevent blocking
-            if (tutorialOverlay) {
-                tutorialOverlay.style.pointerEvents = 'none';
-            }
             syncTutorialOverlay();
             // Re-render questions to re-enable buttons
             renderQuestions();
