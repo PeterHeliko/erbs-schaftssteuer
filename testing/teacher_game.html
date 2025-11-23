@@ -1314,7 +1314,7 @@
                 let deltaY = (targetY - emojiObj.y) * lerpFactor;
                 
                 // Limit maximum speed (pixels per frame at 60fps)
-                const maxSpeed = emojiObj.isHovering ? 2.0 : 1.5;
+                const maxSpeed = emojiObj.isHovering ? 1.5 : 1.5;
                 const currentSpeed = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                 
                 if (currentSpeed > maxSpeed) {
